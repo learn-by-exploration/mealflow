@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MealFlow</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <!-- ─── Sidebar ─── -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <h1 class="logo">🍽️ MealFlow</h1>
+      <button class="icon-btn" id="sidebar-toggle" title="Toggle sidebar">
+        <span class="material-icons-round">menu</span>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" data-view="today" class="nav-item active">
+        <span class="material-icons-round">today</span>
+        <span class="nav-label">Today</span>
+      </a>
+      <a href="#" data-view="planner" class="nav-item">
+        <span class="material-icons-round">calendar_month</span>
+        <span class="nav-label">Meal Planner</span>
+      </a>
+      <a href="#" data-view="recipes" class="nav-item">
+        <span class="material-icons-round">restaurant_menu</span>
+        <span class="nav-label">Recipes</span>
+      </a>
+      <a href="#" data-view="ingredients" class="nav-item">
+        <span class="material-icons-round">egg</span>
+        <span class="nav-label">Ingredients</span>
+      </a>
+      <a href="#" data-view="shopping" class="nav-item">
+        <span class="material-icons-round">shopping_cart</span>
+        <span class="nav-label">Shopping Lists</span>
+      </a>
+      <a href="#" data-view="nutrition" class="nav-item">
+        <span class="material-icons-round">monitoring</span>
+        <span class="nav-label">Nutrition</span>
+      </a>
+      <a href="#" data-view="dashboard" class="nav-item">
+        <span class="material-icons-round">dashboard</span>
+        <span class="nav-label">Dashboard</span>
+      </a>
+      <hr class="nav-divider">
+      <a href="#" data-view="settings" class="nav-item">
+        <span class="material-icons-round">settings</span>
+        <span class="nav-label">Settings</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-text" id="logout-btn">
+        <span class="material-icons-round">logout</span>
+        <span>Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ─── Main Content ─── -->
+  <main id="main" class="main">
+    <div id="content" class="content">
+      <!-- Views rendered here by app.js -->
+    </div>
+  </main>
+
+  <!-- ─── Toast container ─── -->
+  <div id="toasts" class="toast-container"></div>
+
+  <!-- ─── Modal overlay ─── -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div id="modal" class="modal">
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

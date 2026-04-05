@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MealFlow — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: var(--bg-primary); }
+    .login-card { background: var(--bg-secondary); border-radius: 16px; padding: 2.5rem; width: 100%; max-width: 400px; box-shadow: 0 4px 24px rgba(0,0,0,.3); }
+    .login-card h1 { text-align: center; margin-bottom: 0.5rem; font-size: 1.75rem; }
+    .login-card p.subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 2rem; }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; font-size: 0.875rem; }
+    .form-group input { width: 100%; padding: 0.625rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.9375rem; box-sizing: border-box; }
+    .form-group input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,.2); }
+    .login-btn { width: 100%; padding: 0.75rem; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+    .login-btn:hover { filter: brightness(1.1); }
+    .toggle-link { text-align: center; margin-top: 1rem; font-size: 0.875rem; }
+    .toggle-link a { color: var(--accent); cursor: pointer; text-decoration: none; }
+    .error-msg { color: var(--error); font-size: 0.8125rem; margin-top: 0.5rem; display: none; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>🍽️ MealFlow</h1>
+    <p class="subtitle">Your personal meal planner</p>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password">
+      </div>
+      <div class="form-group" id="name-group" style="display:none">
+        <label for="display_name">Display Name</label>
+        <input type="text" id="display_name" name="display_name" autocomplete="name">
+      </div>
+      <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;margin-bottom:0.75rem" id="remember-group">
+        <input type="checkbox" id="remember" name="remember"> Remember me
+      </label>
+      <p class="error-msg" id="error-msg"></p>
+      <button type="submit" class="login-btn" id="submit-btn">Login</button>
+    </form>
+    <p class="toggle-link">
+      <span id="toggle-text">Don't have an account?</span>
+      <a id="toggle-link" href="#">Register</a>
+    </p>
+  </div>
+
+  <script>
+    let isRegister = false;
+    const form = document.getElementById('login-form');
+    const toggleLink = document.getElementById('toggle-link');
+    const toggleText = document.getElementById('toggle-text');
+    const nameGroup = document.getElementById('name-group');
+    const submitBtn = document.getElementById('submit-btn');
+    const errorMsg = document.getElementById('error-msg');
+    const rememberGroup = document.getElementById('remember-group');
+
+    toggleLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      isRegister = !isRegister;
+      nameGroup.style.display = isRegister ? 'block' : 'none';
+      rememberGroup.style.display = isRegister ? 'none' : 'flex';
+      submitBtn.textContent = isRegister ? 'Register' : 'Login';
+      toggleText.textContent = isRegister ? 'Already have an account?' : "Don't have an account?";
+      toggleLink.textContent = isRegister ? 'Login' : 'Register';
+      errorMsg.style.display = 'none';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = 'none';
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
+      const body = { email, password };
+      if (isRegister) body.display_name = document.getElementById('display_name').value.trim();
+      else body.remember = document.getElementById('remember').checked;
+
+      try {
+        const r = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          errorMsg.textContent = data.error || 'Something went wrong';
+          errorMsg.style.display = 'block';
+          return;
+        }
+        window.location.href = '/';
+      } catch {
+        errorMsg.textContent = 'Network error — please try again';
+        errorMsg.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
