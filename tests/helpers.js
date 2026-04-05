@@ -40,6 +40,10 @@ function _ensureTestAuth() {
 
 function cleanDb() {
   const { db } = setup();
+  try { db.exec('DELETE FROM person_festivals'); } catch {}
+  try { db.exec('DELETE FROM festival_recipes'); } catch {}
+  try { db.exec('DELETE FROM fasting_rules'); } catch {}
+  try { db.exec('DELETE FROM festivals'); } catch {}
   try { db.exec('DELETE FROM person_assignments'); } catch {}
   try { db.exec('DELETE FROM persons'); } catch {}
   try { db.exec('DELETE FROM invite_codes'); } catch {}
@@ -177,9 +181,56 @@ function makeInviteCode(householdId, userId) {
   return code;
 }
 
+function makeFestival(overrides = {}) {
+  const { db } = setup();
+  const o = {
+    name: 'Test Festival',
+    type: 'hindu',
+    region: 'pan_india',
+    date_rule: JSON.stringify({ type: 'fixed_yearly', dates: { '2026': '2026-04-10' } }),
+    duration_days: 1,
+    is_fasting: 0,
+    ...overrides
+  };
+  const r = db.prepare('INSERT OR IGNORE INTO festivals (name, type, region, date_rule, duration_days, is_fasting, description, fasting_type) VALUES (?,?,?,?,?,?,?,?)').run(
+    o.name, o.type, o.region, o.date_rule, o.duration_days, o.is_fasting, o.description || '', o.fasting_type || ''
+  );
+  if (r.changes === 0) return db.prepare('SELECT * FROM festivals WHERE name = ?').get(o.name);
+  return db.prepare('SELECT * FROM festivals WHERE id = ?').get(r.lastInsertRowid);
+}
+
+function addFastingRule(festivalId, overrides = {}) {
+  const { db } = setup();
+  const o = { rule_type: 'deny', category: null, ingredient_name: null, notes: '', ...overrides };
+  const r = db.prepare('INSERT INTO fasting_rules (festival_id, rule_type, category, ingredient_name, notes) VALUES (?,?,?,?,?)').run(
+    festivalId, o.rule_type, o.category, o.ingredient_name, o.notes
+  );
+  return db.prepare('SELECT * FROM fasting_rules WHERE id = ?').get(r.lastInsertRowid);
+}
+
+function linkPersonFestival(personId, festivalId) {
+  const { db } = setup();
+  db.prepare('INSERT OR IGNORE INTO person_festivals (person_id, festival_id) VALUES (?,?)').run(personId, festivalId);
+}
+
+function linkFestivalRecipe(festivalId, recipeId) {
+  const { db } = setup();
+  db.prepare('INSERT OR IGNORE INTO festival_recipes (festival_id, recipe_id) VALUES (?,?)').run(festivalId, recipeId);
+}
+
+function makeMealPlanItem(mealPlanId, recipeId, overrides = {}) {
+  const { db } = setup();
+  const o = { servings: 1, position: 0, ...overrides };
+  const r = db.prepare('INSERT INTO meal_plan_items (meal_plan_id, recipe_id, servings, position) VALUES (?,?,?,?)').run(
+    mealPlanId, recipeId, o.servings, o.position
+  );
+  return db.prepare('SELECT * FROM meal_plan_items WHERE id = ?').get(r.lastInsertRowid);
+}
+
 module.exports = {
   setup, cleanDb, teardown, agent, rawAgent,
   makeIngredient, makeRecipe, makeTag, linkTag, addRecipeIngredient,
   makeMealPlan, makeShoppingList, makeUser2,
   makeHousehold, makePerson, assignPersonToItem, makeInviteCode,
+  makeFestival, addFastingRule, linkPersonFestival, linkFestivalRecipe, makeMealPlanItem,
 };

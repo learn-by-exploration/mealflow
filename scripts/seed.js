@@ -103,7 +103,73 @@ function seedRecipes(db, userId) {
   return { count: total, inserted: count };
 }
 
-module.exports = { seedIngredients, seedRecipes };
+/**
+ * Seed festivals from data/festivals.json
+ */
+function seedFestivals(db) {
+  const dataPath = path.join(__dirname, '..', 'data', 'festivals.json');
+  const festivals = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+
+  let count = 0;
+
+  const insertFestival = db.prepare(`
+    INSERT INTO festivals (name, name_hindi, type, region, date_rule, duration_days, description, is_fasting, fasting_type)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const insertRule = db.prepare(`
+    INSERT INTO fasting_rules (festival_id, rule_type, category, ingredient_name, notes)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+
+  const insertFestivalRecipe = db.prepare(`
+    INSERT OR IGNORE INTO festival_recipes (festival_id, recipe_id) VALUES (?, ?)
+  `);
+
+  const seedAll = db.transaction(() => {
+    for (const f of festivals) {
+      const existing = db.prepare('SELECT id FROM festivals WHERE name = ?').get(f.name);
+      if (existing) continue;
+
+      const result = insertFestival.run(
+        f.name, f.name_hindi || '', f.type, f.region || 'pan_india',
+        f.date_rule, f.duration_days || 1, f.description || '',
+        f.is_fasting || 0, f.fasting_type || ''
+      );
+      const festivalId = result.lastInsertRowid;
+
+      // Insert fasting rules
+      if (f.fasting_rules) {
+        for (const rule of f.fasting_rules) {
+          insertRule.run(
+            festivalId, rule.rule_type,
+            rule.category || null, rule.ingredient_name || null,
+            rule.notes || ''
+          );
+        }
+      }
+
+      // Link recipes by name
+      if (f.recipes) {
+        for (const recipeName of f.recipes) {
+          const recipe = db.prepare('SELECT id FROM recipes WHERE name = ?').get(recipeName);
+          if (recipe) {
+            insertFestivalRecipe.run(festivalId, recipe.id);
+          }
+        }
+      }
+
+      count++;
+    }
+  });
+
+  seedAll();
+
+  const total = db.prepare('SELECT COUNT(*) AS c FROM festivals').get().c;
+  return { count: total, inserted: count };
+}
+
+module.exports = { seedIngredients, seedRecipes, seedFestivals };
 
 // CLI: node scripts/seed.js
 if (require.main === module) {
@@ -128,6 +194,10 @@ if (require.main === module) {
   console.log('Seeding recipes...');
   const recResult = seedRecipes(db, user.id);
   console.log(`  ${recResult.inserted} new, ${recResult.count} total`);
+
+  console.log('Seeding festivals...');
+  const festResult = seedFestivals(db);
+  console.log(`  ${festResult.inserted} new, ${festResult.count} total`);
 
   console.log('Done.');
   db.close();

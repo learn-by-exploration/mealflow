@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { seedIngredients, seedRecipes } = require('../../scripts/seed');
+const { seedIngredients, seedRecipes, seedFestivals } = require('../../scripts/seed');
 
 module.exports = function seedRoutes({ db }) {
   const router = Router();
@@ -11,6 +11,11 @@ module.exports = function seedRoutes({ db }) {
 
   router.post('/api/seed/recipes', (req, res) => {
     const result = seedRecipes(db, req.userId);
+    res.json(result);
+  });
+
+  router.post('/api/seed/festivals', (req, res) => {
+    const result = seedFestivals(db);
     res.json(result);
   });
 

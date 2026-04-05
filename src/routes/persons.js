@@ -18,9 +18,12 @@ module.exports = function personRoutes({ db, audit }) {
     if (!householdId) return res.status(400).json({ error: 'No household. Create or join one first.' });
 
     const persons = db.prepare('SELECT * FROM persons WHERE household_id = ? AND is_active = 1 ORDER BY name').all(householdId);
-    // Parse restrictions JSON
+    // Parse restrictions JSON and add festival count
     for (const p of persons) {
       try { p.restrictions = JSON.parse(p.restrictions || '[]'); } catch { p.restrictions = []; }
+      try {
+        p.festival_count = db.prepare('SELECT COUNT(*) AS c FROM person_festivals WHERE person_id = ?').get(p.id).c;
+      } catch { p.festival_count = 0; }
     }
     res.json(persons);
   });
