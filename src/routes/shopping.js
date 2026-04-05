@@ -131,5 +131,95 @@ module.exports = function shoppingRoutes({ db }) {
     res.json({ ok: true });
   });
 
+  // ─── Subtract pantry quantities from shopping list ───
+  router.post('/api/shopping/:id/subtract-pantry', (req, res) => {
+    const list = db.prepare('SELECT * FROM shopping_lists WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    if (!list) throw new NotFoundError('Shopping list', req.params.id);
+
+    const user = db.prepare('SELECT household_id FROM users WHERE id = ?').get(req.userId);
+    const householdId = user ? user.household_id : null;
+
+    const items = db.prepare('SELECT * FROM shopping_list_items WHERE list_id = ? ORDER BY category, position').all(list.id);
+
+    const updateStmt = db.prepare('UPDATE shopping_list_items SET quantity = ? WHERE id = ?');
+    const deleteStmt = db.prepare('DELETE FROM shopping_list_items WHERE id = ?');
+
+    for (const item of items) {
+      if (!householdId) continue;
+      const pantryItem = db.prepare(
+        'SELECT * FROM pantry WHERE household_id = ? AND LOWER(name) = LOWER(?)'
+      ).get(householdId, item.name);
+      if (!pantryItem) continue;
+
+      const remaining = item.quantity - pantryItem.quantity;
+      if (remaining <= 0) {
+        deleteStmt.run(item.id);
+      } else {
+        updateStmt.run(remaining, item.id);
+      }
+    }
+
+    const updatedItems = db.prepare('SELECT * FROM shopping_list_items WHERE list_id = ? ORDER BY category, position').all(list.id);
+    res.json({ ...list, items: updatedItems });
+  });
+
+  // ─── Generate quick-commerce deep links ───
+  router.get('/api/shopping/:id/deeplinks', (req, res) => {
+    const list = db.prepare('SELECT * FROM shopping_lists WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    if (!list) throw new NotFoundError('Shopping list', req.params.id);
+
+    const items = db.prepare('SELECT * FROM shopping_list_items WHERE list_id = ? ORDER BY category, position').all(list.id);
+
+    const deeplinks = items.map(item => {
+      const encoded = encodeURIComponent(item.name);
+      return {
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        blinkit: `https://blinkit.com/s/?q=${encoded}`,
+        zepto: `https://www.zeptonow.com/search?query=${encoded}`,
+        bigbasket: `https://www.bigbasket.com/ps/?q=${encoded}`,
+        swiggy: `https://www.swiggy.com/instamart/search?query=${encoded}`,
+      };
+    });
+
+    res.json(deeplinks);
+  });
+
+  // ─── Share shopping list as formatted text ───
+  router.get('/api/shopping/:id/share', (req, res) => {
+    const list = db.prepare('SELECT * FROM shopping_lists WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    if (!list) throw new NotFoundError('Shopping list', req.params.id);
+
+    const items = db.prepare('SELECT * FROM shopping_list_items WHERE list_id = ? ORDER BY category, position').all(list.id);
+
+    const categoryEmojis = {
+      grains: '📦', vegetables: '🥬', fruits: '🍎', dairy: '🥛',
+      spices: '🌶️', oils: '🫒', meat: '🥩', seafood: '🐟',
+      beverages: '🥤', snacks: '🍿', other: '📦',
+    };
+
+    // Group by category
+    const grouped = {};
+    for (const item of items) {
+      const cat = item.category || 'other';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(item);
+    }
+
+    let text = `🛒 Shopping List: ${list.name}\n`;
+
+    for (const [category, catItems] of Object.entries(grouped)) {
+      const emoji = categoryEmojis[category] || '📦';
+      text += `\n${emoji} ${category.toUpperCase()}\n`;
+      for (const item of catItems) {
+        const check = item.checked ? '☑' : '☐';
+        text += `${check} ${item.name} — ${item.quantity} ${item.unit}\n`;
+      }
+    }
+
+    res.json({ text: text.trim() });
+  });
+
   return router;
 };

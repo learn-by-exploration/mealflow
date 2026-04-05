@@ -1,7 +1,7 @@
 # MealFlow — Claude Code Configuration
 
-> **Last updated:** 5 April 2026 · **Version:** 0.5.0
-> **Metrics:** 135 tests | 17 test files | 85 API routes | 28 DB tables + FTS | ~7,000 LOC
+> **Last updated:** 5 April 2026 · **Version:** 0.6.0
+> **Metrics:** 157 tests | 20 test files | 95 API routes | 30 DB tables + FTS | ~8,500 LOC
 
 ## Project Overview
 

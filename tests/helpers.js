@@ -40,6 +40,8 @@ function _ensureTestAuth() {
 
 function cleanDb() {
   const { db } = setup();
+  try { db.exec('DELETE FROM purchase_history'); } catch {}
+  try { db.exec('DELETE FROM pantry'); } catch {}
   try { db.exec('DELETE FROM poll_votes'); } catch {}
   try { db.exec('DELETE FROM poll_options'); } catch {}
   try { db.exec('DELETE FROM polls'); } catch {}
@@ -250,11 +252,20 @@ function addPollOption(pollId, overrides = {}) {
   return db.prepare('SELECT * FROM poll_options WHERE id = ?').get(r.lastInsertRowid);
 }
 
+function makePantryItem(householdId, overrides = {}) {
+  const { db } = setup();
+  const o = { name: 'Rice', quantity: 1000, unit: 'g', category: 'grains', location: 'kitchen', ...overrides };
+  const r = db.prepare('INSERT INTO pantry (household_id, name, quantity, unit, category, location) VALUES (?,?,?,?,?,?)').run(
+    householdId, o.name, o.quantity, o.unit, o.category, o.location
+  );
+  return db.prepare('SELECT * FROM pantry WHERE id = ?').get(r.lastInsertRowid);
+}
+
 module.exports = {
   setup, cleanDb, teardown, agent, rawAgent,
   makeIngredient, makeRecipe, makeTag, linkTag, addRecipeIngredient,
   makeMealPlan, makeShoppingList, makeUser2,
   makeHousehold, makePerson, assignPersonToItem, makeInviteCode,
   makeFestival, addFastingRule, linkPersonFestival, linkFestivalRecipe, makeMealPlanItem,
-  makePoll, addPollOption,
+  makePoll, addPollOption, makePantryItem,
 };

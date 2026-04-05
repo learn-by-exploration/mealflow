@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS purchase_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+  ingredient_id INTEGER REFERENCES ingredients(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  quantity REAL DEFAULT 0,
+  unit TEXT DEFAULT '',
+  price REAL,
+  store TEXT DEFAULT '',
+  purchased_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
