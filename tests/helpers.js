@@ -40,6 +40,7 @@ function _ensureTestAuth() {
 
 function cleanDb() {
   const { db } = setup();
+  try { db.exec('DELETE FROM nutrition_alerts'); } catch {}
   try { db.exec('DELETE FROM purchase_history'); } catch {}
   try { db.exec('DELETE FROM pantry'); } catch {}
   try { db.exec('DELETE FROM poll_votes'); } catch {}
