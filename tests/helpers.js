@@ -40,6 +40,9 @@ function _ensureTestAuth() {
 
 function cleanDb() {
   const { db } = setup();
+  try { db.exec('DELETE FROM recurrence_rules'); } catch {}
+  try { db.exec('DELETE FROM notifications'); } catch {}
+  try { db.exec('DELETE FROM notification_preferences'); } catch {}
   try { db.exec('DELETE FROM nutrition_alerts'); } catch {}
   try { db.exec('DELETE FROM purchase_history'); } catch {}
   try { db.exec('DELETE FROM pantry'); } catch {}

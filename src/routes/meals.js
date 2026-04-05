@@ -1,10 +1,138 @@
 const { Router } = require('express');
 const { validate } = require('../middleware/validate');
 const { createMealPlan, addMealPlanItem } = require('../schemas/meals.schema');
+const { createRecurrence, expandRecurrence } = require('../schemas/recurrence.schema');
 const { NotFoundError } = require('../errors');
 
 module.exports = function mealsRoutes({ db, enrichRecipe }) {
   const router = Router();
+
+  // ─── Set recurrence rule ───
+  router.post('/api/meals/items/:itemId/recurrence', validate(createRecurrence), (req, res) => {
+    const item = db.prepare(`
+      SELECT mpi.* FROM meal_plan_items mpi
+      JOIN meal_plans mp ON mp.id = mpi.meal_plan_id
+      WHERE mpi.id = ? AND mp.user_id = ?
+    `).get(req.params.itemId, req.userId);
+    if (!item) throw new NotFoundError('Meal plan item', req.params.itemId);
+
+    const { pattern, days_of_week, start_date, end_date } = req.body;
+    const dowStr = JSON.stringify(days_of_week || []);
+
+    // Remove existing recurrence for this item
+    db.prepare('DELETE FROM recurrence_rules WHERE meal_plan_item_id = ?').run(item.id);
+
+    const r = db.prepare(
+      'INSERT INTO recurrence_rules (meal_plan_item_id, pattern, days_of_week, start_date, end_date) VALUES (?,?,?,?,?)'
+    ).run(item.id, pattern, dowStr, start_date, end_date || null);
+
+    const rule = db.prepare('SELECT * FROM recurrence_rules WHERE id = ?').get(r.lastInsertRowid);
+    res.status(201).json(rule);
+  });
+
+  // ─── Remove recurrence rule ───
+  router.delete('/api/meals/items/:itemId/recurrence', (req, res) => {
+    const item = db.prepare(`
+      SELECT mpi.* FROM meal_plan_items mpi
+      JOIN meal_plans mp ON mp.id = mpi.meal_plan_id
+      WHERE mpi.id = ? AND mp.user_id = ?
+    `).get(req.params.itemId, req.userId);
+    if (!item) throw new NotFoundError('Meal plan item', req.params.itemId);
+
+    db.prepare('DELETE FROM recurrence_rules WHERE meal_plan_item_id = ?').run(item.id);
+    res.json({ ok: true });
+  });
+
+  // ─── Expand recurrences ───
+  router.post('/api/meals/recurrence/expand', validate(expandRecurrence), (req, res) => {
+    const { from_date, to_date } = req.body;
+
+    // Get all recurrence rules for this user's items
+    const rules = db.prepare(`
+      SELECT rr.*, mpi.recipe_id, mpi.custom_name, mpi.servings, mp.meal_type, mp.date AS original_date
+      FROM recurrence_rules rr
+      JOIN meal_plan_items mpi ON mpi.id = rr.meal_plan_item_id
+      JOIN meal_plans mp ON mp.id = mpi.meal_plan_id
+      WHERE mp.user_id = ?
+    `).all(req.userId);
+
+    let itemsCreated = 0;
+
+    for (const rule of rules) {
+      // Determine effective date range
+      const effStart = rule.start_date > from_date ? rule.start_date : from_date;
+      const effEnd = rule.end_date && rule.end_date < to_date ? rule.end_date : to_date;
+
+      const dates = generateDates(rule.pattern, rule.days_of_week, rule.original_date, effStart, effEnd);
+
+      for (const dateStr of dates) {
+        // Skip the original date (plan already exists for that item)
+        if (dateStr === rule.original_date) continue;
+
+        // Find or create meal plan for this date + meal_type
+        let plan = db.prepare('SELECT * FROM meal_plans WHERE user_id = ? AND date = ? AND meal_type = ?')
+          .get(req.userId, dateStr, rule.meal_type);
+        if (!plan) {
+          const pr = db.prepare('INSERT INTO meal_plans (user_id, date, meal_type) VALUES (?,?,?)')
+            .run(req.userId, dateStr, rule.meal_type);
+          plan = db.prepare('SELECT * FROM meal_plans WHERE id = ?').get(pr.lastInsertRowid);
+        }
+
+        // Add item
+        const maxPos = db.prepare('SELECT COALESCE(MAX(position), -1) + 1 AS next FROM meal_plan_items WHERE meal_plan_id = ?').get(plan.id).next;
+        db.prepare('INSERT INTO meal_plan_items (meal_plan_id, recipe_id, custom_name, servings, position) VALUES (?,?,?,?,?)')
+          .run(plan.id, rule.recipe_id || null, rule.custom_name || '', rule.servings || 1, maxPos);
+        itemsCreated++;
+      }
+    }
+
+    res.json({ items_created: itemsCreated });
+  });
+
+  /**
+   * Generate dates matching a recurrence pattern.
+   */
+  function generateDates(pattern, daysOfWeekStr, originalDate, startDate, endDate) {
+    const dow = (() => { try { return JSON.parse(daysOfWeekStr); } catch { return []; } })();
+    const dates = [];
+    const start = new Date(startDate + 'T12:00:00');
+    const end = new Date(endDate + 'T12:00:00');
+    const orig = new Date(originalDate + 'T12:00:00');
+
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const y = cursor.getFullYear();
+      const m = String(cursor.getMonth() + 1).padStart(2, '0');
+      const d = String(cursor.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+
+      switch (pattern) {
+        case 'daily':
+          dates.push(dateStr);
+          break;
+        case 'specific_days':
+          if (dow.includes(cursor.getDay())) dates.push(dateStr);
+          break;
+        case 'weekly':
+          if (cursor.getDay() === orig.getDay()) dates.push(dateStr);
+          break;
+        case 'biweekly': {
+          if (cursor.getDay() === orig.getDay()) {
+            const diffMs = cursor - orig;
+            const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+            if (diffWeeks % 2 === 0) dates.push(dateStr);
+          }
+          break;
+        }
+        case 'monthly':
+          if (cursor.getDate() === orig.getDate()) dates.push(dateStr);
+          break;
+      }
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return dates;
+  }
 
   // ─── Toggle leftover flag ───
   router.put('/api/meals/items/:id/leftover', (req, res) => {

@@ -144,6 +144,9 @@ app.use(require('./routes/templates')(deps));
 app.use(require('./routes/pantry')(deps));
 app.use(require('./routes/purchases')(deps));
 app.use(require('./routes/seed')(deps));
+app.use(require('./routes/import')(deps));
+app.use(require('./routes/notifications')(deps));
+app.use(require('./routes/calendar')(deps));
 
 // ─── Health checks ───
 app.get('/health', (req, res) => {
