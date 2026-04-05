@@ -147,6 +147,8 @@ app.use(require('./routes/seed')(deps));
 app.use(require('./routes/import')(deps));
 app.use(require('./routes/notifications')(deps));
 app.use(require('./routes/calendar')(deps));
+app.use(require('./routes/ai')(deps));
+app.use(require('./routes/cost')(deps));
 
 // ─── Health checks ───
 app.get('/health', (req, res) => {
