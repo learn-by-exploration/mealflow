@@ -6,6 +6,57 @@ const { NotFoundError } = require('../errors');
 module.exports = function mealsRoutes({ db, enrichRecipe }) {
   const router = Router();
 
+  // ─── Toggle leftover flag ───
+  router.put('/api/meals/items/:id/leftover', (req, res) => {
+    const item = db.prepare(`
+      SELECT mpi.* FROM meal_plan_items mpi
+      JOIN meal_plans mp ON mp.id = mpi.meal_plan_id
+      WHERE mpi.id = ? AND mp.user_id = ?
+    `).get(req.params.id, req.userId);
+    if (!item) throw new NotFoundError('Meal plan item', req.params.id);
+
+    const newVal = item.is_leftover ? 0 : 1;
+    db.prepare('UPDATE meal_plan_items SET is_leftover = ? WHERE id = ?').run(newVal, item.id);
+    res.json({ ...item, is_leftover: newVal });
+  });
+
+  // ─── Get recent leftovers (last 3 days) ───
+  router.get('/api/meals/leftovers', (req, res) => {
+    const items = db.prepare(`
+      SELECT mpi.*, r.name AS recipe_name, mp.date, mp.meal_type
+      FROM meal_plan_items mpi
+      JOIN meal_plans mp ON mp.id = mpi.meal_plan_id
+      LEFT JOIN recipes r ON r.id = mpi.recipe_id
+      WHERE mp.user_id = ? AND mpi.is_leftover = 1
+        AND mp.date >= date('now', '-3 days')
+      ORDER BY mp.date DESC
+    `).all(req.userId);
+    res.json(items);
+  });
+
+  // ─── Reuse a leftover in new meal slot ───
+  router.post('/api/meals/items/:id/reuse', (req, res) => {
+    const item = db.prepare(`
+      SELECT mpi.* FROM meal_plan_items mpi
+      JOIN meal_plans mp ON mp.id = mpi.meal_plan_id
+      WHERE mpi.id = ? AND mp.user_id = ? AND mpi.is_leftover = 1
+    `).get(req.params.id, req.userId);
+    if (!item) throw new NotFoundError('Leftover item', req.params.id);
+
+    const { meal_plan_id } = req.body;
+    if (!meal_plan_id) return res.status(400).json({ error: 'meal_plan_id required' });
+
+    const target = db.prepare('SELECT * FROM meal_plans WHERE id = ? AND user_id = ?').get(meal_plan_id, req.userId);
+    if (!target) throw new NotFoundError('Meal plan', meal_plan_id);
+
+    const maxPos = db.prepare('SELECT COALESCE(MAX(position), -1) + 1 AS next FROM meal_plan_items WHERE meal_plan_id = ?').get(target.id).next;
+    const r = db.prepare('INSERT INTO meal_plan_items (meal_plan_id, recipe_id, custom_name, servings, position, leftover_from_item_id) VALUES (?,?,?,?,?,?)').run(
+      target.id, item.recipe_id || null, item.custom_name || '', item.servings || 1, maxPos, item.id
+    );
+    const created = db.prepare('SELECT * FROM meal_plan_items WHERE id = ?').get(r.lastInsertRowid);
+    res.status(201).json(created);
+  });
+
   // ─── Get meal plans for a date range ───
   router.get('/api/meals', (req, res) => {
     const { from, to } = req.query;

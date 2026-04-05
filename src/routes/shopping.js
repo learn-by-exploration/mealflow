@@ -49,6 +49,7 @@ module.exports = function shoppingRoutes({ db }) {
       JOIN recipe_ingredients ri ON ri.recipe_id = r.id
       JOIN ingredients i ON i.id = ri.ingredient_id
       WHERE mp.user_id = ? AND mp.date >= ? AND mp.date <= ?
+        AND (mpi.is_leftover = 0 OR mpi.is_leftover IS NULL)
     `).all(req.userId, date_from, date_to);
 
     // Aggregate by ingredient

@@ -139,6 +139,8 @@ app.use(require('./routes/data')(deps));
 app.use(require('./routes/households')(deps));
 app.use(require('./routes/persons')(deps));
 app.use(require('./routes/festivals')(deps));
+app.use(require('./routes/polls')(deps));
+app.use(require('./routes/templates')(deps));
 app.use(require('./routes/seed')(deps));
 
 // ─── Health checks ───

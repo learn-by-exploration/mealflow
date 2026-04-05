@@ -40,6 +40,11 @@ function _ensureTestAuth() {
 
 function cleanDb() {
   const { db } = setup();
+  try { db.exec('DELETE FROM poll_votes'); } catch {}
+  try { db.exec('DELETE FROM poll_options'); } catch {}
+  try { db.exec('DELETE FROM polls'); } catch {}
+  try { db.exec('DELETE FROM meal_template_items'); } catch {}
+  try { db.exec('DELETE FROM meal_templates'); } catch {}
   try { db.exec('DELETE FROM person_festivals'); } catch {}
   try { db.exec('DELETE FROM festival_recipes'); } catch {}
   try { db.exec('DELETE FROM fasting_rules'); } catch {}
@@ -227,10 +232,29 @@ function makeMealPlanItem(mealPlanId, recipeId, overrides = {}) {
   return db.prepare('SELECT * FROM meal_plan_items WHERE id = ?').get(r.lastInsertRowid);
 }
 
+function makePoll(householdId, userId, overrides = {}) {
+  const { db } = setup();
+  const o = { question: 'What for dinner?', target_date: '2026-04-10', target_meal_type: 'dinner', status: 'open', ...overrides };
+  const r = db.prepare('INSERT INTO polls (household_id, created_by, question, target_date, target_meal_type, status) VALUES (?,?,?,?,?,?)').run(
+    householdId, userId, o.question, o.target_date, o.target_meal_type, o.status
+  );
+  return db.prepare('SELECT * FROM polls WHERE id = ?').get(r.lastInsertRowid);
+}
+
+function addPollOption(pollId, overrides = {}) {
+  const { db } = setup();
+  const o = { custom_name: 'Option', position: 0, ...overrides };
+  const r = db.prepare('INSERT INTO poll_options (poll_id, recipe_id, custom_name, position) VALUES (?,?,?,?)').run(
+    pollId, o.recipe_id || null, o.custom_name, o.position
+  );
+  return db.prepare('SELECT * FROM poll_options WHERE id = ?').get(r.lastInsertRowid);
+}
+
 module.exports = {
   setup, cleanDb, teardown, agent, rawAgent,
   makeIngredient, makeRecipe, makeTag, linkTag, addRecipeIngredient,
   makeMealPlan, makeShoppingList, makeUser2,
   makeHousehold, makePerson, assignPersonToItem, makeInviteCode,
   makeFestival, addFastingRule, linkPersonFestival, linkFestivalRecipe, makeMealPlanItem,
+  makePoll, addPollOption,
 };
