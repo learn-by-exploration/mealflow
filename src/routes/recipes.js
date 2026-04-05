@@ -6,6 +6,128 @@ const { NotFoundError, ForbiddenError, ValidationError } = require('../errors');
 module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNextPosition }) {
   const router = Router();
 
+  // ─── FTS Search ───
+  router.get('/api/recipes/search', (req, res) => {
+    const { q, region, cuisine, difficulty, dietary } = req.query;
+    let recipes;
+
+    if (q) {
+      // Sanitize FTS query: strip special chars, add prefix matching
+      const sanitized = q.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+      if (!sanitized) {
+        return res.json([]);
+      }
+      const ftsQuery = sanitized.split(/\s+/).map(w => `"${w}"*`).join(' ');
+      let sql = `SELECT r.* FROM recipes r
+        JOIN recipes_fts f ON f.rowid = r.id
+        WHERE recipes_fts MATCH ?`;
+      const params = [ftsQuery];
+
+      if (region) { sql += ' AND r.region = ?'; params.push(region); }
+      if (cuisine) { sql += ' AND r.cuisine = ?'; params.push(cuisine); }
+      if (difficulty) { sql += ' AND r.difficulty = ?'; params.push(difficulty); }
+
+      sql += ' ORDER BY rank';
+      recipes = db.prepare(sql).all(...params);
+    } else {
+      let sql = 'SELECT r.* FROM recipes r WHERE 1=1';
+      const params = [];
+
+      if (region) { sql += ' AND r.region = ?'; params.push(region); }
+      if (cuisine) { sql += ' AND r.cuisine = ?'; params.push(cuisine); }
+      if (difficulty) { sql += ' AND r.difficulty = ?'; params.push(difficulty); }
+
+      sql += ' ORDER BY r.name';
+      recipes = db.prepare(sql).all(...params);
+    }
+
+    if (dietary) {
+      recipes = recipes.filter(r => {
+        const tags = db.prepare('SELECT t.name FROM tags t JOIN recipe_tags rt ON rt.tag_id = t.id WHERE rt.recipe_id = ?').all(r.id);
+        return tags.some(t => t.name === dietary);
+      });
+    }
+
+    res.json(enrichRecipes(recipes));
+  });
+
+  // ─── List distinct regions with counts ───
+  router.get('/api/recipes/regions', (req, res) => {
+    const regions = db.prepare(`
+      SELECT region, COUNT(*) as count FROM recipes
+      WHERE user_id = ? AND region != ''
+      GROUP BY region ORDER BY count DESC
+    `).all(req.userId);
+    res.json(regions);
+  });
+
+  // ─── Reorder recipes ───
+  router.put('/api/recipes/reorder', (req, res) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids array required' });
+    const stmt = db.prepare('UPDATE recipes SET position = ? WHERE id = ? AND user_id = ?');
+    ids.forEach((id, i) => stmt.run(i, id, req.userId));
+    res.json({ ok: true });
+  });
+
+  // ─── Clone system recipe ───
+  router.post('/api/recipes/:id/clone', (req, res) => {
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(req.params.id);
+    if (!recipe) throw new NotFoundError('Recipe', req.params.id);
+
+    const position = getNextPosition('recipes', 'user_id = ?', [req.userId]);
+
+    const result = db.prepare(`
+      INSERT INTO recipes (user_id, name, description, servings, prep_time, cook_time, cuisine, difficulty, image_url, source_url, notes, region, is_system, is_favorite, position)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
+    `).run(
+      req.userId, recipe.name, recipe.description, recipe.servings,
+      recipe.prep_time, recipe.cook_time, recipe.cuisine, recipe.difficulty,
+      recipe.image_url || '', recipe.source_url || '', recipe.notes || '',
+      recipe.region || '', position
+    );
+    const newId = result.lastInsertRowid;
+
+    // Copy ingredients
+    const ings = db.prepare('SELECT * FROM recipe_ingredients WHERE recipe_id = ?').all(recipe.id);
+    const ingStmt = db.prepare('INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit, notes, position) VALUES (?, ?, ?, ?, ?, ?)');
+    for (const ing of ings) {
+      ingStmt.run(newId, ing.ingredient_id, ing.quantity, ing.unit, ing.notes, ing.position);
+    }
+
+    // Copy tags
+    const tags = db.prepare('SELECT tag_id FROM recipe_tags WHERE recipe_id = ?').all(recipe.id);
+    const tagStmt = db.prepare('INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id) VALUES (?, ?)');
+    for (const t of tags) {
+      tagStmt.run(newId, t.tag_id);
+    }
+
+    const cloned = db.prepare('SELECT * FROM recipes WHERE id = ?').get(newId);
+    res.status(201).json(enrichRecipe(cloned));
+  });
+
+  // ─── Scaled recipe ───
+  router.get('/api/recipes/:id/scaled/:servings', (req, res) => {
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(req.params.id);
+    if (!recipe) throw new NotFoundError('Recipe', req.params.id);
+
+    const targetServings = parseFloat(req.params.servings);
+    if (isNaN(targetServings) || targetServings <= 0) {
+      throw new ValidationError('Invalid servings value');
+    }
+
+    const enriched = enrichRecipe(recipe);
+    const factor = targetServings / (recipe.servings || 1);
+
+    enriched.servings = targetServings;
+    enriched.ingredients = enriched.ingredients.map(ing => ({
+      ...ing,
+      quantity: Math.round(ing.quantity * factor * 100) / 100,
+    }));
+
+    res.json(enriched);
+  });
+
   // ─── List recipes ───
   router.get('/api/recipes', (req, res) => {
     const { cuisine, difficulty, tag, favorite, q, limit, offset } = req.query;
@@ -43,13 +165,13 @@ module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNe
     const position = getNextPosition('recipes', 'user_id = ?', [req.userId]);
 
     const result = db.prepare(`
-      INSERT INTO recipes (user_id, name, description, servings, prep_time, cook_time, cuisine, difficulty, image_url, source_url, notes, is_favorite, position)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO recipes (user_id, name, description, servings, prep_time, cook_time, cuisine, difficulty, image_url, source_url, notes, region, is_favorite, position)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       req.userId, data.name, data.description || '', data.servings || 1,
       data.prep_time || 0, data.cook_time || 0, data.cuisine || '',
       data.difficulty || 'easy', data.image_url || '', data.source_url || '',
-      data.notes || '', data.is_favorite || 0, position
+      data.notes || '', data.region || '', data.is_favorite || 0, position
     );
     const recipeId = result.lastInsertRowid;
 
@@ -86,7 +208,7 @@ module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNe
     const fields = [];
     const values = [];
 
-    for (const key of ['name', 'description', 'servings', 'prep_time', 'cook_time', 'cuisine', 'difficulty', 'image_url', 'source_url', 'notes', 'is_favorite']) {
+    for (const key of ['name', 'description', 'servings', 'prep_time', 'cook_time', 'cuisine', 'difficulty', 'image_url', 'source_url', 'notes', 'is_favorite', 'region']) {
       if (data[key] !== undefined) {
         fields.push(`${key} = ?`);
         values.push(data[key]);
@@ -132,15 +254,6 @@ module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNe
     const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
     if (!recipe) throw new NotFoundError('Recipe', req.params.id);
     db.prepare('DELETE FROM recipes WHERE id = ?').run(req.params.id);
-    res.json({ ok: true });
-  });
-
-  // ─── Reorder recipes ───
-  router.put('/api/recipes/reorder', (req, res) => {
-    const { ids } = req.body;
-    if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids array required' });
-    const stmt = db.prepare('UPDATE recipes SET position = ? WHERE id = ? AND user_id = ?');
-    ids.forEach((id, i) => stmt.run(i, id, req.userId));
     res.json({ ok: true });
   });
 

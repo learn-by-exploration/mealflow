@@ -84,4 +84,42 @@ describe('Recipes', () => {
     const res = await agent().post('/api/recipes').send({ servings: 2 });
     assert.equal(res.status, 400);
   });
+
+  it('POST /api/recipes — accepts region field', async () => {
+    const res = await agent().post('/api/recipes').send({
+      name: 'Regional Recipe', servings: 4, cuisine: 'indian', region: 'south_indian'
+    });
+    assert.equal(res.status, 201);
+    assert.equal(res.body.region, 'south_indian');
+  });
+
+  it('GET /api/recipes/regions — returns region counts', async () => {
+    makeRecipe({ name: 'R1', region: 'punjabi' });
+    makeRecipe({ name: 'R2', region: 'punjabi' });
+    makeRecipe({ name: 'R3', region: 'south_indian' });
+    const res = await agent().get('/api/recipes/regions');
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.body));
+    const punjabi = res.body.find(r => r.region === 'punjabi');
+    assert.ok(punjabi);
+    assert.equal(punjabi.count, 2);
+  });
+
+  it('POST /api/recipes/:id/clone — clones system recipe to user', async () => {
+    const { db } = setup();
+    // Create a system recipe
+    const sysRecipe = makeRecipe({ name: 'System Dal', is_system: 1, region: 'pan_indian' });
+    const ing = makeIngredient({ name: 'Clone Ing' });
+    addRecipeIngredient(sysRecipe.id, ing.id, { quantity: 100 });
+    const tag = makeTag({ name: 'CloneTag' });
+    linkTag(sysRecipe.id, tag.id);
+
+    const res = await agent().post(`/api/recipes/${sysRecipe.id}/clone`);
+    assert.equal(res.status, 201);
+    assert.equal(res.body.name, 'System Dal');
+    assert.equal(res.body.is_system, 0);
+    assert.notEqual(res.body.id, sysRecipe.id);
+    assert.ok(res.body.ingredients.length > 0);
+    assert.ok(res.body.tags.length > 0);
+  });
 });

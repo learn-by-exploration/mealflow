@@ -138,6 +138,7 @@ app.use(require('./routes/stats')(deps));
 app.use(require('./routes/data')(deps));
 app.use(require('./routes/households')(deps));
 app.use(require('./routes/persons')(deps));
+app.use(require('./routes/seed')(deps));
 
 // ─── Health checks ───
 app.get('/health', (req, res) => {

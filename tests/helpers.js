@@ -56,6 +56,7 @@ function cleanDb() {
   db.exec('DELETE FROM ingredients');
   db.exec('DELETE FROM tags');
   db.exec('DELETE FROM settings');
+  try { db.exec("INSERT INTO recipes_fts(recipes_fts) VALUES('rebuild')"); } catch {}
   try { db.exec('DELETE FROM nutrition_goals'); } catch {}
   try { db.exec('DELETE FROM audit_log'); } catch {}
   try { db.exec('DELETE FROM login_attempts'); } catch {}
@@ -87,9 +88,9 @@ function makeIngredient(overrides = {}) {
 
 function makeRecipe(overrides = {}) {
   const { db } = setup();
-  const o = { name: 'Test Recipe', description: '', servings: 2, prep_time: 10, cook_time: 20, cuisine: 'Italian', difficulty: 'easy', user_id: 1, position: 0, ...overrides };
-  const r = db.prepare('INSERT INTO recipes (user_id, name, description, servings, prep_time, cook_time, cuisine, difficulty, position) VALUES (?,?,?,?,?,?,?,?,?)').run(
-    o.user_id, o.name, o.description, o.servings, o.prep_time, o.cook_time, o.cuisine, o.difficulty, o.position
+  const o = { name: 'Test Recipe', description: '', servings: 2, prep_time: 10, cook_time: 20, cuisine: 'Italian', difficulty: 'easy', user_id: 1, position: 0, region: '', is_system: 0, ...overrides };
+  const r = db.prepare('INSERT INTO recipes (user_id, name, description, servings, prep_time, cook_time, cuisine, difficulty, position, region, is_system) VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(
+    o.user_id, o.name, o.description, o.servings, o.prep_time, o.cook_time, o.cuisine, o.difficulty, o.position, o.region, o.is_system
   );
   return db.prepare('SELECT * FROM recipes WHERE id=?').get(r.lastInsertRowid);
 }

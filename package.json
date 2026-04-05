@@ -1,6 +1,6 @@
 {
   "name": "mealflow",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Self-hosted meal planner & nutrition tracker with recipes, meal plans, shopping lists, and zero cloud dependencies",
   "main": "src/server.js",
   "scripts": {

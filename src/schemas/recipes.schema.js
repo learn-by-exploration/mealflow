@@ -8,6 +8,7 @@ const createRecipe = z.object({
   prep_time: z.number().int().min(0).max(1440).default(0),
   cook_time: z.number().int().min(0).max(1440).default(0),
   cuisine: z.string().max(100).default(''),
+  region: z.string().max(100).default(''),
   difficulty: difficulty.default('easy'),
   image_url: z.string().max(500).default(''),
   source_url: z.string().max(500).default(''),
