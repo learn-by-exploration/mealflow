@@ -37,6 +37,14 @@ function createAuthMiddleware(db) {
     req.sessionId = sid;
     req.authMethod = 'session';
 
+    // Sliding window: extend session if it will expire in less than half the max age
+    const config = require('../config');
+    const halfLife = Math.floor(config.session.maxAgeDays / 2) || 3;
+    db.prepare(`UPDATE sessions SET expires_at = datetime('now', '+' || ? || ' days')
+      WHERE sid = ? AND expires_at < datetime('now', '+' || ? || ' days')`).run(
+      config.session.maxAgeDays, sid, halfLife
+    );
+
     // Set householdId for household-scoped access
     const user = db.prepare('SELECT household_id FROM users WHERE id = ?').get(session.user_id);
     if (user) req.householdId = user.household_id;
@@ -56,6 +64,14 @@ function createAuthMiddleware(db) {
         req.userId = session.user_id;
         req.sessionId = sid;
         req.authMethod = 'session';
+
+        // Sliding window: extend session if it will expire in less than half the max age
+        const config = require('../config');
+        const halfLife = Math.floor(config.session.maxAgeDays / 2) || 3;
+        db.prepare(`UPDATE sessions SET expires_at = datetime('now', '+' || ? || ' days')
+          WHERE sid = ? AND expires_at < datetime('now', '+' || ? || ' days')`).run(
+          config.session.maxAgeDays, sid, halfLife
+        );
       }
     }
     next();

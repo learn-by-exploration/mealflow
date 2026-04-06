@@ -12,18 +12,6 @@ const logger = (() => { try { return require('../logger'); } catch { return cons
 function initDatabase(dbDir) {
   if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
   const dbPath = path.join(dbDir, 'mealflow.db');
-  const shmPath = dbPath + '-shm';
-  const walPath = dbPath + '-wal';
-
-  // ─── Stale SHM recovery ───
-  if (fs.existsSync(shmPath) && fs.existsSync(walPath)) {
-    try {
-      fs.unlinkSync(shmPath);
-      logger.info('Removed stale .db-shm file for clean WAL recovery');
-    } catch (e) {
-      logger.warn({ err: e }, 'Could not remove stale .db-shm file');
-    }
-  }
 
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');

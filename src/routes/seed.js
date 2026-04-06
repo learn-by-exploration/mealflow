@@ -4,23 +4,32 @@ const { seedIngredients, seedRecipes, seedFestivals } = require('../../scripts/s
 module.exports = function seedRoutes({ db }) {
   const router = Router();
 
-  router.post('/api/seed/ingredients', (req, res) => {
+  // Admin guard for all seed endpoints
+  function requireAdmin(req, res, next) {
+    const user = db.prepare('SELECT household_role FROM users WHERE id = ?').get(req.userId);
+    if (!user || user.household_role !== 'admin') {
+      return res.status(403).json({ error: 'Admin role required' });
+    }
+    next();
+  }
+
+  router.post('/api/seed/ingredients', requireAdmin, (req, res) => {
     const result = seedIngredients(db, req.userId);
     res.json(result);
   });
 
-  router.post('/api/seed/recipes', (req, res) => {
+  router.post('/api/seed/recipes', requireAdmin, (req, res) => {
     const result = seedRecipes(db, req.userId);
     res.json(result);
   });
 
-  router.post('/api/seed/festivals', (req, res) => {
+  router.post('/api/seed/festivals', requireAdmin, (req, res) => {
     const result = seedFestivals(db);
     res.json(result);
   });
 
   // ─── Seed a sample 7-day meal plan ───
-  router.post('/api/seed/sample-plan', (req, res) => {
+  router.post('/api/seed/sample-plan', requireAdmin, (req, res) => {
     const recipes = db.prepare('SELECT id, name, meal_suitability FROM recipes WHERE user_id = ? ORDER BY RANDOM() LIMIT 30').all(req.userId);
     if (!recipes.length) {
       // Seed recipes first if none exist

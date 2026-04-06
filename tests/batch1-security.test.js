@@ -299,14 +299,14 @@ describe('Batch 1: Security & DB Improvements', () => {
   // SEC-09: Cookie security flags
   // ═══════════════════════════════════════════════════════════════
   describe('SEC-09: Cookie security flags', () => {
-    it('login cookie has HttpOnly, SameSite=Strict, and Path=/', async () => {
+    it('login cookie has HttpOnly, SameSite=Lax, and Path=/', async () => {
       const res = await rawAgent().post('/api/auth/login').send({
         email: 'test@test.com', password: 'testpassword',
       });
       assert.equal(res.status, 200);
       const cookie = res.headers['set-cookie'][0];
       assert.ok(cookie.includes('HttpOnly'), 'Should have HttpOnly');
-      assert.ok(cookie.includes('SameSite=Strict'), 'Should have SameSite=Strict');
+      assert.ok(cookie.includes('SameSite=Lax'), 'Should have SameSite=Lax');
       assert.ok(cookie.includes('Path=/'), 'Should have Path=/');
       // In test env (not https), Secure flag should NOT be present
       assert.ok(!cookie.includes('Secure'), 'Should not have Secure in non-https test');
@@ -319,7 +319,7 @@ describe('Batch 1: Security & DB Improvements', () => {
       assert.equal(res.status, 201);
       const cookie = res.headers['set-cookie'][0];
       assert.ok(cookie.includes('HttpOnly'));
-      assert.ok(cookie.includes('SameSite=Strict'));
+      assert.ok(cookie.includes('SameSite=Lax'));
       assert.ok(cookie.includes('Path=/'));
     });
   });

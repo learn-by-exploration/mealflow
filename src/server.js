@@ -151,10 +151,10 @@ app.use('/api', (req, res, next) => {
 const compression = require('compression');
 app.use(compression());
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public'), { maxAge: '1d', etag: true }));
 
 // ─── Serve uploaded images ───
-app.use('/images', express.static(path.join(config.dbDir, 'images')));
+app.use('/images', express.static(path.join(config.dbDir, 'images'), { maxAge: '1d', etag: true }));
 
 // ─── CSRF Protection ───
 const csrfProtection = createCsrfMiddleware();

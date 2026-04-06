@@ -46,7 +46,7 @@ module.exports = function authRoutes({ db, audit }) {
       sid, result.lastInsertRowid, `+${days} days`
     );
 
-    const parts = [`mf_sid=${sid}`, 'HttpOnly', 'SameSite=Strict', 'Path=/', `Max-Age=${days * 86400}`];
+    const parts = [`mf_sid=${sid}`, 'HttpOnly', 'SameSite=Lax', 'Path=/', `Max-Age=${days * 86400}`];
     if (req.secure || req.headers['x-forwarded-proto'] === 'https') parts.push('Secure');
     res.setHeader('Set-Cookie', parts.join('; '));
 
@@ -95,7 +95,7 @@ module.exports = function authRoutes({ db, audit }) {
 
     db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
 
-    const parts = [`mf_sid=${sid}`, 'HttpOnly', 'SameSite=Strict', 'Path=/', `Max-Age=${days * 86400}`];
+    const parts = [`mf_sid=${sid}`, 'HttpOnly', 'SameSite=Lax', 'Path=/', `Max-Age=${days * 86400}`];
     if (req.secure || req.headers['x-forwarded-proto'] === 'https') parts.push('Secure');
     res.setHeader('Set-Cookie', parts.join('; '));
 
@@ -115,7 +115,10 @@ module.exports = function authRoutes({ db, audit }) {
     if (sid) {
       db.prepare('DELETE FROM sessions WHERE sid = ?').run(sid);
     }
-    res.setHeader('Set-Cookie', 'mf_sid=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');
+    res.setHeader('Set-Cookie', [
+      'mf_sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0',
+      'csrf_token=; SameSite=Strict; Path=/; Max-Age=0',
+    ]);
     res.json({ ok: true });
   });
 

@@ -7,6 +7,14 @@ const submitBtn = document.getElementById('submit-btn');
 const errorMsg = document.getElementById('error-msg');
 const rememberGroup = document.getElementById('remember-group');
 
+// Issue 14: Redirect already-authenticated users
+(async () => {
+  try {
+    const r = await fetch('/api/auth/session');
+    if (r.ok) window.location.href = '/';
+  } catch {}
+})();
+
 toggleLink.addEventListener('click', (e) => {
   e.preventDefault();
   isRegister = !isRegister;
@@ -21,6 +29,12 @@ toggleLink.addEventListener('click', (e) => {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   errorMsg.style.display = 'none';
+
+  // Issue 13: Disable button during submit
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Please wait...';
+
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
 
@@ -45,5 +59,8 @@ form.addEventListener('submit', async (e) => {
   } catch {
     errorMsg.textContent = 'Network error — please try again';
     errorMsg.style.display = 'block';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 });

@@ -14,7 +14,12 @@ services:
       - HOST=0.0.0.0
       - LOG_LEVEL=info
       - SHUTDOWN_TIMEOUT_MS=15000
-      - ALLOWED_ORIGINS=http://localhost:3458,http://192.168.11.3:3458
+      - ALLOWED_ORIGINS=http://localhost:3458
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     tmpfs:
       - /tmp
     security_opt:

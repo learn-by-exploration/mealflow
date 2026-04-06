@@ -25,12 +25,12 @@ function _ensureTestAuth() {
   const user = _db.prepare('SELECT id FROM users WHERE id = 1').get();
   if (!user) {
     const hash = bcrypt.hashSync('testpassword', 4);
-    _db.prepare('INSERT INTO users (email, password_hash, display_name) VALUES (?,?,?)').run(
-      'test@test.com', hash, 'Test User'
+    _db.prepare('INSERT INTO users (email, password_hash, display_name, household_role) VALUES (?,?,?,?)').run(
+      'test@test.com', hash, 'Test User', 'admin'
     );
   } else {
     const hash = bcrypt.hashSync('testpassword', 4);
-    _db.prepare('UPDATE users SET password_hash=? WHERE id=1').run(hash);
+    _db.prepare('UPDATE users SET password_hash=?, household_role=? WHERE id=1').run(hash, 'admin');
   }
   _testSessionId = 'test-session-' + crypto.randomUUID();
   _db.prepare(
@@ -64,6 +64,7 @@ function cleanDb() {
   try { db.exec('DELETE FROM invite_codes'); } catch {}
   try { db.exec('DELETE FROM households WHERE id > 0'); } catch {}
   try { db.exec('UPDATE users SET household_id = NULL'); } catch {}
+  try { db.exec("UPDATE users SET household_role = 'admin' WHERE id = 1"); } catch {}
   db.exec('DELETE FROM nutrition_log');
   db.exec('DELETE FROM shopping_list_items');
   db.exec('DELETE FROM shopping_lists');
