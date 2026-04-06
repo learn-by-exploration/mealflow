@@ -10,16 +10,10 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%236366f1' rx='32'/><text x='96' y='120' font-size='80' font-weight='bold' text-anchor='middle' fill='white' font-family='system-ui'>🍽</text></svg>",
-      "sizes": "192x192",
+      "src": "/icon.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%236366f1' rx='64'/><text x='256' y='320' font-size='220' font-weight='bold' text-anchor='middle' fill='white' font-family='system-ui'>🍽</text></svg>",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }

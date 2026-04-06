@@ -1,8 +1,12 @@
 // ─── MealFlow Service Worker ───
 // Network-first caching strategy for offline support
 
-const CACHE_NAME = 'mealflow-v1';
-const PRECACHE = ['/', '/styles.css', '/app.js', '/js/api.js', '/js/utils.js', '/js/login.js', '/login.html'];
+const CACHE_NAME = 'mealflow-v1.0.0';
+const PRECACHE = [
+  '/', '/styles.css', '/app.js',
+  '/js/api.js', '/js/utils.js', '/js/login.js',
+  '/login.html', '/manifest.json'
+];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(PRECACHE)));

@@ -6,14 +6,21 @@ services:
     volumes:
       - mealflow-data:/app/data
       - mealflow-backups:/app/backups
-    restart: unless-stopped
+    restart: always
     environment:
       - NODE_ENV=production
       - PORT=3458
+      - HOST=0.0.0.0
       - LOG_LEVEL=info
+      - ALLOWED_ORIGINS=http://localhost:3458
       - SHUTDOWN_TIMEOUT_MS=15000
     tmpfs:
       - /tmp
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     security_opt:
       - no-new-privileges:true
     stop_grace_period: 30s

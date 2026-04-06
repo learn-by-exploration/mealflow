@@ -5,6 +5,7 @@ services:
     ports:
       - "0.0.0.0:3458:3458"
     volumes:
+      # Ensure ./data/ and ./backups/ are writable by container user (node, uid 1000)
       - ./data:/app/data
       - ./backups:/app/backups
     restart: always

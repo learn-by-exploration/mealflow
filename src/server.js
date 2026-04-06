@@ -113,6 +113,8 @@ app.use(cors({
 }));
 
 // ─── Rate limiting ───
+// Note: In-memory rate limits reset on container/process restart. This is acceptable
+// for a single-instance self-hosted app. For distributed deployments, use a Redis store.
 if (!config.isTest) {
   const globalLimiter = rateLimit({
     windowMs: config.rateLimit.windowMs,
