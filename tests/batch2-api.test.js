@@ -266,7 +266,7 @@ describe('Batch 2: API Quality & Performance', () => {
       const res = await rawAgent().get('/api/health');
       assert.equal(res.status, 200);
       assert.equal(res.body.status, 'ok');
-      assert.equal(res.body.version, '0.9.0');
+      assert.equal(res.body.version, '1.0.0');
       assert.ok(typeof res.body.uptime === 'number');
       assert.equal(res.body.db, 'connected');
     });
