@@ -154,6 +154,26 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
     res.json(enriched);
   });
 
+  // ─── PO-13: Recipe of the Day ───
+  router.get('/api/recipes/suggestion/daily', (req, res) => {
+    // Deterministic rotation based on day-of-year
+    const now = new Date();
+    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+
+    const recipes = db.prepare(
+      'SELECT * FROM recipes WHERE user_id = ? AND deleted_at IS NULL ORDER BY id'
+    ).all(req.userId);
+
+    if (!recipes.length) return res.json(null);
+
+    // Pick recipe based on day rotation
+    const idx = dayOfYear % recipes.length;
+    const recipe = recipes[idx];
+    const enriched = enrichRecipe(recipe);
+
+    res.json(enriched);
+  });
+
   // ─── Trash — list soft-deleted recipes ───
   router.get('/api/recipes/trash', (req, res) => {
     const recipes = db.prepare('SELECT * FROM recipes WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC')

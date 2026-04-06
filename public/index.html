@@ -13,67 +13,102 @@
 </head>
 <body>
   <!-- ─── Sidebar ─── -->
-  <aside id="sidebar" class="sidebar">
+  <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
     <div class="sidebar-header">
       <h1 class="logo">🍽️ MealFlow</h1>
-      <button class="icon-btn" id="sidebar-toggle" title="Toggle sidebar">
+      <button class="icon-btn" id="sidebar-toggle" title="Toggle sidebar" aria-label="Toggle sidebar">
         <span class="material-icons-round">menu</span>
       </button>
     </div>
     <nav class="sidebar-nav">
-      <a href="#" data-view="today" class="nav-item active">
+      <a href="#" data-view="today" class="nav-item active" aria-label="Today">
         <span class="material-icons-round">today</span>
         <span class="nav-label">Today</span>
       </a>
-      <a href="#" data-view="planner" class="nav-item">
+      <a href="#" data-view="planner" class="nav-item" aria-label="Meal Planner">
         <span class="material-icons-round">calendar_month</span>
         <span class="nav-label">Meal Planner</span>
       </a>
-      <a href="#" data-view="recipes" class="nav-item">
+      <a href="#" data-view="recipes" class="nav-item" aria-label="Recipes">
         <span class="material-icons-round">restaurant_menu</span>
         <span class="nav-label">Recipes</span>
       </a>
-      <a href="#" data-view="ingredients" class="nav-item">
+      <a href="#" data-view="ingredients" class="nav-item" aria-label="Ingredients">
         <span class="material-icons-round">egg</span>
         <span class="nav-label">Ingredients</span>
       </a>
-      <a href="#" data-view="shopping" class="nav-item">
+      <a href="#" data-view="shopping" class="nav-item" aria-label="Shopping Lists">
         <span class="material-icons-round">shopping_cart</span>
         <span class="nav-label">Shopping Lists</span>
       </a>
-      <a href="#" data-view="pantry" class="nav-item">
+      <a href="#" data-view="pantry" class="nav-item" aria-label="Pantry">
         <span class="material-icons-round">kitchen</span>
         <span class="nav-label">Pantry</span>
       </a>
-      <a href="#" data-view="polls" class="nav-item">
+      <a href="#" data-view="polls" class="nav-item" aria-label="Polls">
         <span class="material-icons-round">how_to_vote</span>
         <span class="nav-label">Polls</span>
       </a>
-      <a href="#" data-view="nutrition" class="nav-item">
+      <a href="#" data-view="nutrition" class="nav-item" aria-label="Nutrition">
         <span class="material-icons-round">monitoring</span>
         <span class="nav-label">Nutrition</span>
       </a>
-      <a href="#" data-view="dashboard" class="nav-item">
+      <a href="#" data-view="dashboard" class="nav-item" aria-label="Dashboard">
         <span class="material-icons-round">dashboard</span>
         <span class="nav-label">Dashboard</span>
       </a>
-      <a href="#" data-view="templates" class="nav-item">
+      <a href="#" data-view="templates" class="nav-item" aria-label="Templates">
         <span class="material-icons-round">content_copy</span>
         <span class="nav-label">Templates</span>
       </a>
       <hr class="nav-divider">
-      <a href="#" data-view="settings" class="nav-item">
+      <a href="#" data-view="settings" class="nav-item" aria-label="Settings">
         <span class="material-icons-round">settings</span>
         <span class="nav-label">Settings</span>
       </a>
     </nav>
     <div class="sidebar-footer">
-      <button class="btn btn-text" id="logout-btn">
+      <button class="btn btn-text" id="logout-btn" aria-label="Logout">
         <span class="material-icons-round">logout</span>
         <span>Logout</span>
       </button>
     </div>
   </aside>
+
+  <!-- ─── Bottom Navigation (Mobile) ─── -->
+  <nav id="bottom-nav" class="bottom-nav" role="navigation" aria-label="Mobile navigation">
+    <div class="bottom-nav-items">
+      <button class="bottom-nav-item active" data-view="today" aria-label="Today">
+        <span class="material-icons-round">today</span>
+        <span class="bottom-nav-label">Today</span>
+      </button>
+      <button class="bottom-nav-item" data-view="planner" aria-label="Planner">
+        <span class="material-icons-round">calendar_month</span>
+        <span class="bottom-nav-label">Planner</span>
+      </button>
+      <button class="bottom-nav-item" data-view="recipes" aria-label="Recipes">
+        <span class="material-icons-round">restaurant_menu</span>
+        <span class="bottom-nav-label">Recipes</span>
+      </button>
+      <button class="bottom-nav-item" data-view="shopping" aria-label="Shopping">
+        <span class="material-icons-round">shopping_cart</span>
+        <span class="bottom-nav-label">Shopping</span>
+      </button>
+      <button class="bottom-nav-item" data-view="more" aria-label="More" aria-expanded="false" aria-controls="bottom-nav-more">
+        <span class="material-icons-round">more_horiz</span>
+        <span class="bottom-nav-label">More</span>
+      </button>
+    </div>
+  </nav>
+  <div id="bottom-nav-more" class="bottom-nav-more-menu" role="menu" aria-label="More navigation options">
+    <button class="bottom-nav-more-item" data-view="pantry" role="menuitem"><span class="material-icons-round">kitchen</span> Pantry</button>
+    <button class="bottom-nav-more-item" data-view="nutrition" role="menuitem"><span class="material-icons-round">monitoring</span> Nutrition</button>
+    <button class="bottom-nav-more-item" data-view="polls" role="menuitem"><span class="material-icons-round">how_to_vote</span> Polls</button>
+    <button class="bottom-nav-more-item" data-view="templates" role="menuitem"><span class="material-icons-round">content_copy</span> Templates</button>
+    <button class="bottom-nav-more-item" data-view="dashboard" role="menuitem"><span class="material-icons-round">dashboard</span> Dashboard</button>
+    <button class="bottom-nav-more-item" data-view="ingredients" role="menuitem"><span class="material-icons-round">egg</span> Ingredients</button>
+    <button class="bottom-nav-more-item" data-view="settings" role="menuitem"><span class="material-icons-round">settings</span> Settings</button>
+  </div>
 
   <!-- ─── Main Content ─── -->
   <main id="main" class="main">
@@ -83,11 +118,11 @@
   </main>
 
   <!-- ─── Toast container ─── -->
-  <div id="toasts" class="toast-container"></div>
+  <div id="toasts" class="toast-container" aria-live="polite" role="status"></div>
 
   <!-- ─── Modal overlay ─── -->
-  <div id="modal-overlay" class="modal-overlay hidden">
-    <div id="modal" class="modal">
+  <div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div id="modal" class="modal" tabindex="-1">
       <div id="modal-content"></div>
     </div>
   </div>

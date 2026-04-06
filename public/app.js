@@ -25,6 +25,8 @@ async function init() {
 
   setApiErrorHandler(showToast);
   setupNav();
+  setupBottomNav();
+  setupKeyboardNav();
 
   // PO-01: Check first-login (no household)
   try {
@@ -35,6 +37,9 @@ async function init() {
   }
 
   await render();
+
+  // PO-12: "What's for today?" notification
+  fireWhatsForTodayNotification();
 }
 
 // ─── Navigation ───
@@ -67,9 +72,12 @@ function setupNav() {
 
 // ─── Render ───
 async function render() {
+  // Sync sidebar
   document.querySelectorAll('.nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.view === currentView);
   });
+  // Sync bottom nav
+  syncBottomNav();
 
   const content = document.getElementById('content');
   switch (currentView) {
@@ -271,14 +279,25 @@ function emptyState(icon, message, btnLabel, btnAction) {
 }
 
 // ════════════════════════════════════════════════════
-// Today View (updated with PO-02, PO-03, PO-07, PO-14)
+// Today View (updated with PO-02, PO-03, PO-07, PO-14, PO-13, UX-04, UX-08, UX-12)
 // ════════════════════════════════════════════════════
 async function renderToday(el) {
+  // UX-09: Show skeleton while loading
+  el.innerHTML = `
+    <div class="pull-to-refresh" id="ptr-today"><div class="ptr-spinner"></div></div>
+    <div class="view-header">
+      <h2>Today — ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
+    </div>
+    <div class="skeleton-card" style="margin-bottom:1rem"><div class="skeleton-line h-lg w-75"></div><div class="skeleton-line w-50"></div></div>
+    <div class="meals-today">${MEAL_SLOTS.map(() => '<div class="skeleton-card"><div class="skeleton-line h-lg w-50"></div><div class="skeleton-line"></div><div class="skeleton-line w-75"></div></div>').join('')}</div>
+  `;
+
   const todayStr = today();
-  const [mealData, summary, goals] = await Promise.all([
+  const [mealData, summary, goals, rotd] = await Promise.all([
     api.get(`/api/meals/${todayStr}`),
     api.get(`/api/nutrition/summary/${todayStr}`),
     api.get('/api/nutrition/goals'),
+    api.get('/api/recipes/suggestion/daily').catch(() => null),
   ]);
 
   const meals = mealData.meals || [];
@@ -289,6 +308,7 @@ async function renderToday(el) {
   try { const allPolls = await api.get('/api/polls?status=open'); activePolls = Array.isArray(allPolls) ? allPolls : []; } catch {}
 
   el.innerHTML = `
+    <div class="pull-to-refresh" id="ptr-today"><div class="ptr-spinner"></div></div>
     <div class="view-header">
       <h2>Today — ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
     </div>
@@ -303,12 +323,24 @@ async function renderToday(el) {
           return `
             <div class="macro-item">
               <span class="macro-label">${capitalize(k)}</span>
-              <div class="progress-bar"><div class="progress-fill ${k !== 'calories' ? k : ''}" style="width:${pct}%"></div></div>
+              <div class="progress-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${capitalize(k)} progress"><div class="progress-fill ${k !== 'calories' ? k : ''}" style="width:${pct}%"></div></div>
               <span class="macro-value">${fmtNutrition(val)}${unit} / ${target}${unit}</span>
             </div>`;
         }).join('')}
       </div>
     </div>
+
+    ${rotd ? `
+      <div class="rotd-card">
+        <span class="rotd-icon">🌟</span>
+        <div class="rotd-info">
+          <h4>Recipe of the Day</h4>
+          <h3>${esc(rotd.name)}</h3>
+          <span class="rotd-meta">${rotd.cuisine ? esc(rotd.cuisine) + ' · ' : ''}${fmtTime((rotd.prep_time || 0) + (rotd.cook_time || 0))} · ${rotd.servings} servings</span>
+        </div>
+        <button class="btn btn-outline btn-sm" id="rotd-try-btn" data-id="${rotd.id}" aria-label="Try ${esc(rotd.name)}">Try it</button>
+      </div>
+    ` : ''}
 
     ${activePolls.length ? `
       <div class="polls-banner">
@@ -316,7 +348,7 @@ async function renderToday(el) {
         ${activePolls.map(p => `
           <div class="poll-card-mini" data-poll-id="${p.id}">
             <span>${esc(p.question)}</span>
-            <button class="btn btn-sm btn-outline poll-vote-btn" data-poll="${p.id}">Vote</button>
+            <button class="btn btn-sm btn-outline poll-vote-btn" data-poll="${p.id}" aria-label="Vote on ${esc(p.question)}">Vote</button>
           </div>
         `).join('')}
       </div>
@@ -336,15 +368,18 @@ async function renderToday(el) {
         ${MEAL_SLOTS.map(type => {
           const meal = meals.find(m => m.meal_type === type);
           const items = meal ? meal.items : [];
+          const itemSummary = items.map(i => i.recipe_name || i.custom_name || 'Custom').join(', ');
+          const totalCal = items.reduce((sum, i) => sum + (i.calories || 0), 0);
+          const ariaLabel = `${SLOT_LABELS[type] || capitalize(type)}: ${itemSummary || 'No items'}${totalCal ? '. ' + totalCal + ' calories' : ''}`;
           return `
-            <div class="meal-card">
+            <div class="meal-card" data-slot="${type}" aria-label="${esc(ariaLabel)}" role="article">
               <div class="meal-header">
                 <span>${SLOT_ICONS[type] || '🍽️'} ${SLOT_LABELS[type] || capitalize(type)}</span>
                 <div class="meal-actions">
-                  <button class="btn btn-sm btn-text meal-history-btn" data-slot="${type}" title="Repeat recent">
+                  <button class="btn btn-sm btn-text meal-history-btn" data-slot="${type}" title="Repeat recent" aria-label="Repeat recent ${SLOT_LABELS[type] || type}">
                     <span class="material-icons-round" style="font-size:1rem">history</span>
                   </button>
-                  <button class="btn btn-sm btn-outline" onclick="window._addMealItem('${todayStr}', '${type}')">+ Add</button>
+                  <button class="btn btn-sm btn-outline" onclick="window._addMealItem('${todayStr}', '${type}')" aria-label="Add item to ${SLOT_LABELS[type] || type}">+ Add</button>
                 </div>
               </div>
               <div class="meal-items">
@@ -360,6 +395,12 @@ async function renderToday(el) {
       </div>
     `}
   `;
+
+  // PO-13: Recipe of the Day try button
+  document.getElementById('rotd-try-btn')?.addEventListener('click', () => {
+    const id = document.getElementById('rotd-try-btn').dataset.id;
+    showRecipeDetail(id);
+  });
 
   // PO-02: Sample plan seeding
   document.getElementById('seed-sample-plan')?.addEventListener('click', async () => {
@@ -388,6 +429,9 @@ async function renderToday(el) {
   el.querySelectorAll('.poll-vote-btn').forEach(btn => {
     btn.addEventListener('click', () => { currentView = 'polls'; render(); });
   });
+
+  // UX-04: Pull to refresh
+  setupPullToRefresh(el, 'ptr-today', () => renderToday(el));
 }
 
 // PO-14 helper: show recent meals for a slot
@@ -525,7 +569,7 @@ async function renderPlanner(el) {
                 const isToday = ds === todayStr;
                 return `
                   <td class="planner-cell ${isToday ? 'is-today' : ''}" data-date="${ds}" data-slot="${slot}" role="gridcell" tabindex="0" aria-label="${SLOT_LABELS[slot]} on ${d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}">
-                    ${items.length ? items.map(i => `<div class="planner-item">${esc(i.recipe_name || i.custom_name || '?')}</div>`).join('') : '<div class="planner-empty">+</div>'}
+                    ${items.length ? items.map(i => `<div class="planner-item" data-slot="${slot}">${esc(i.recipe_name || i.custom_name || '?')}</div>`).join('') : '<div class="planner-empty">+</div>'}
                   </td>`;
               }).join('')}
             </tr>
@@ -557,6 +601,12 @@ async function renderPlanner(el) {
     cell.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showAddMealModal(cell.dataset.date, cell.dataset.slot); }
     });
+  });
+
+  // UX-03: Swipe gestures
+  setupSwipeGestures(el.querySelector('.planner-grid-wrapper'), {
+    onSwipeLeft: () => { plannerWeekStart.setDate(plannerWeekStart.getDate() + 7); renderPlanner(el); },
+    onSwipeRight: () => { plannerWeekStart.setDate(plannerWeekStart.getDate() - 7); renderPlanner(el); },
   });
 }
 
@@ -636,34 +686,116 @@ async function showAddMealModal(date, slot) {
 }
 
 // ════════════════════════════════════════════════════
-// Recipes View
+// Recipes View (with UX-14 filter drawer, UX-09 skeleton)
 // ════════════════════════════════════════════════════
+let recipeFilters = { cuisine: '', difficulty: '', dietary: '', cooking_method: '' };
+
 async function renderRecipes(el) {
+  // UX-09: Skeleton
+  el.innerHTML = `
+    <div class="view-header"><h2>Recipes</h2><button class="btn btn-primary" disabled>+ New Recipe</button></div>
+    <div class="recipe-grid">${[1,2,3,4].map(() => '<div class="skeleton-card"><div class="skeleton-line h-lg w-75"></div><div class="skeleton-line w-50"></div><div class="skeleton-line"></div></div>').join('')}</div>
+  `;
+
   recipes = await api.get('/api/recipes');
   if (!Array.isArray(recipes)) recipes = [];
 
   el.innerHTML = `
     <div class="view-header">
       <h2>Recipes</h2>
-      <button class="btn btn-primary" id="add-recipe-btn">+ New Recipe</button>
+      <button class="btn btn-primary" id="add-recipe-btn" aria-label="Create new recipe">+ New Recipe</button>
     </div>
-    <div class="search-bar">
-      <input type="text" id="recipe-search" placeholder="Search recipes..." class="input" aria-label="Search recipes">
+    <div class="search-bar" style="display:flex;gap:0.5rem;align-items:center">
+      <input type="text" id="recipe-search" placeholder="Search recipes..." class="input" aria-label="Search recipes" style="flex:1">
+      <button class="btn btn-outline filter-toggle-btn" id="filter-toggle" aria-expanded="false" aria-controls="filter-drawer" aria-label="Toggle filters">
+        <span class="material-icons-round">tune</span> Filters
+      </button>
     </div>
+    <div id="filter-drawer" class="filter-drawer" role="region" aria-label="Recipe filters">
+      <div class="filter-row">
+        <div class="form-group"><label>Cuisine</label><select id="f-cuisine" class="input" aria-label="Filter by cuisine"><option value="">All</option><option value="Indian">Indian</option><option value="Italian">Italian</option><option value="Chinese">Chinese</option><option value="Mexican">Mexican</option><option value="Thai">Thai</option><option value="Japanese">Japanese</option></select></div>
+        <div class="form-group"><label>Difficulty</label><select id="f-difficulty" class="input" aria-label="Filter by difficulty"><option value="">All</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></div>
+        <div class="form-group"><label>Dietary</label><select id="f-dietary" class="input" aria-label="Filter by diet"><option value="">All</option><option value="veg">Vegetarian</option><option value="vegan">Vegan</option><option value="non-veg">Non-veg</option><option value="jain">Jain</option></select></div>
+      </div>
+      <button class="btn btn-text btn-sm" id="clear-filters" aria-label="Clear all filters">Clear all</button>
+    </div>
+    <div id="active-filters" class="active-filters"></div>
     <div class="recipe-grid" id="recipe-grid">
       ${recipes.length ? recipes.map(r => recipeCardHTML(r)).join('') : emptyState('restaurant_menu', 'No recipes yet. Create your first recipe!', '+ New Recipe', () => showRecipeModal())}
     </div>
   `;
 
   document.getElementById('add-recipe-btn')?.addEventListener('click', () => showRecipeModal());
+
+  // UX-14: Filter toggle
+  document.getElementById('filter-toggle')?.addEventListener('click', () => {
+    const drawer = document.getElementById('filter-drawer');
+    const isOpen = drawer.classList.toggle('open');
+    document.getElementById('filter-toggle').setAttribute('aria-expanded', isOpen);
+  });
+
+  // UX-14: Filter change handlers
+  ['f-cuisine', 'f-difficulty', 'f-dietary'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => applyRecipeFilters());
+  });
+
+  document.getElementById('clear-filters')?.addEventListener('click', () => {
+    document.getElementById('f-cuisine').value = '';
+    document.getElementById('f-difficulty').value = '';
+    document.getElementById('f-dietary').value = '';
+    recipeFilters = { cuisine: '', difficulty: '', dietary: '' };
+    applyRecipeFilters();
+  });
+
   document.getElementById('recipe-search')?.addEventListener('input', debounce(async (e) => {
-    recipes = await api.get(`/api/recipes?q=${encodeURIComponent(e.target.value)}`);
+    const q = e.target.value;
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (recipeFilters.cuisine) params.set('cuisine', recipeFilters.cuisine);
+    if (recipeFilters.difficulty) params.set('difficulty', recipeFilters.difficulty);
+    recipes = await api.get(`/api/recipes?${params.toString()}`);
     if (!Array.isArray(recipes)) recipes = [];
     renderRecipeGrid();
   }));
 
   el.querySelectorAll('.recipe-card').forEach(card => {
     card.addEventListener('click', () => showRecipeDetail(card.dataset.id));
+  });
+}
+
+function applyRecipeFilters() {
+  recipeFilters.cuisine = document.getElementById('f-cuisine')?.value || '';
+  recipeFilters.difficulty = document.getElementById('f-difficulty')?.value || '';
+  recipeFilters.dietary = document.getElementById('f-dietary')?.value || '';
+
+  // Update active filter chips
+  const chipContainer = document.getElementById('active-filters');
+  if (chipContainer) {
+    const chips = [];
+    if (recipeFilters.cuisine) chips.push(`<span class="filter-chip">${esc(recipeFilters.cuisine)} <button class="filter-chip-remove" data-filter="cuisine" aria-label="Remove cuisine filter">×</button></span>`);
+    if (recipeFilters.difficulty) chips.push(`<span class="filter-chip">${esc(recipeFilters.difficulty)} <button class="filter-chip-remove" data-filter="difficulty" aria-label="Remove difficulty filter">×</button></span>`);
+    if (recipeFilters.dietary) chips.push(`<span class="filter-chip">${esc(recipeFilters.dietary)} <button class="filter-chip-remove" data-filter="dietary" aria-label="Remove dietary filter">×</button></span>`);
+    chipContainer.innerHTML = chips.join('');
+
+    chipContainer.querySelectorAll('.filter-chip-remove').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const f = btn.dataset.filter;
+        document.getElementById(`f-${f}`).value = '';
+        recipeFilters[f] = '';
+        applyRecipeFilters();
+      });
+    });
+  }
+
+  // Re-fetch with filters
+  const params = new URLSearchParams();
+  const q = document.getElementById('recipe-search')?.value || '';
+  if (q) params.set('q', q);
+  if (recipeFilters.cuisine) params.set('cuisine', recipeFilters.cuisine);
+  if (recipeFilters.difficulty) params.set('difficulty', recipeFilters.difficulty);
+  api.get(`/api/recipes?${params.toString()}`).then(data => {
+    recipes = Array.isArray(data) ? data : [];
+    renderRecipeGrid();
   });
 }
 
@@ -694,10 +826,11 @@ function renderRecipeGrid() {
   });
 }
 
-// PO-15: Recipe detail with cooking timers
+// PO-15: Recipe detail with cooking timers + UX-13 bottom sheet
 async function showRecipeDetail(id) {
   const recipe = await api.get(`/api/recipes/${id}`);
   showModal(`
+    <div class="bottom-sheet-handle"></div>
     <h2>${esc(recipe.name)} ${recipe.is_favorite ? '⭐' : ''}</h2>
     ${recipe.description ? `<p>${esc(recipe.description)}</p>` : ''}
     <div class="detail-meta">
@@ -737,16 +870,29 @@ async function showRecipeDetail(id) {
       btn.textContent = 'Timer started!';
     });
   });
+
+  // UX-13: Add bottom-sheet class on mobile
+  if (window.innerWidth <= 768) {
+    document.getElementById('modal-overlay')?.classList.add('bottom-sheet');
+  }
 }
 
 function showRecipeModal(recipe = null) {
   showModal(`
     <h2>${recipe ? 'Edit Recipe' : 'New Recipe'}</h2>
-    <form id="recipe-form">
-      <div class="form-group"><label>Name *</label><input type="text" name="name" value="${recipe ? esc(recipe.name) : ''}" required class="input"></div>
+    <form id="recipe-form" novalidate>
+      <div class="form-group">
+        <label>Name *</label>
+        <input type="text" name="name" value="${recipe ? esc(recipe.name) : ''}" required class="input" aria-required="true">
+        <div class="validation-msg" id="v-name">Recipe name is required</div>
+      </div>
       <div class="form-group"><label>Description</label><textarea name="description" class="input" rows="3">${recipe ? esc(recipe.description) : ''}</textarea></div>
       <div class="form-row">
-        <div class="form-group"><label>Servings</label><input type="number" name="servings" value="${recipe ? recipe.servings : 1}" min="1" class="input"></div>
+        <div class="form-group">
+          <label>Servings</label>
+          <input type="number" name="servings" value="${recipe ? recipe.servings : 1}" min="1" class="input">
+          <div class="validation-msg" id="v-servings">Must be at least 1</div>
+        </div>
         <div class="form-group"><label>Prep (min)</label><input type="number" name="prep_time" value="${recipe ? recipe.prep_time : 0}" min="0" class="input"></div>
         <div class="form-group"><label>Cook (min)</label><input type="number" name="cook_time" value="${recipe ? recipe.cook_time : 0}" min="0" class="input"></div>
       </div>
@@ -765,11 +911,41 @@ function showRecipeModal(recipe = null) {
     </form>
   `);
 
-  document.getElementById('recipe-form')?.addEventListener('submit', async (e) => {
+  // UX-11: Inline validation
+  const form = document.getElementById('recipe-form');
+  const nameInput = form?.querySelector('[name="name"]');
+  const servingsInput = form?.querySelector('[name="servings"]');
+
+  nameInput?.addEventListener('input', () => {
+    const valid = nameInput.value.trim().length > 0;
+    nameInput.classList.toggle('input-error', !valid);
+    nameInput.classList.toggle('input-success', valid);
+    const msg = document.getElementById('v-name');
+    if (msg) msg.classList.toggle('visible', !valid);
+  });
+
+  servingsInput?.addEventListener('input', () => {
+    const valid = parseInt(servingsInput.value) >= 1;
+    servingsInput.classList.toggle('input-error', !valid);
+    const msg = document.getElementById('v-servings');
+    if (msg) msg.classList.toggle('visible', !valid);
+  });
+
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
+
+    // UX-11: Validate before submit
+    const name = fd.get('name')?.trim();
+    if (!name) {
+      nameInput?.classList.add('input-error');
+      document.getElementById('v-name')?.classList.add('visible');
+      nameInput?.focus();
+      return;
+    }
+
     const data = {
-      name: fd.get('name'),
+      name,
       description: fd.get('description') || '',
       servings: parseInt(fd.get('servings')) || 1,
       prep_time: parseInt(fd.get('prep_time')) || 0,
@@ -816,31 +992,57 @@ async function renderIngredients(el) {
 }
 
 // ════════════════════════════════════════════════════
-// Shopping View (with PO-03)
+// Shopping View (with PO-03, UX-04, UX-10, UX-15)
 // ════════════════════════════════════════════════════
 async function renderShopping(el) {
   const lists = await api.get('/api/shopping');
   const arr = Array.isArray(lists) ? lists : [];
   el.innerHTML = `
+    <div class="pull-to-refresh" id="ptr-shopping"><div class="ptr-spinner"></div></div>
     <div class="view-header">
       <h2>Shopping Lists</h2>
-      <button class="btn btn-primary" id="add-shopping-btn">+ New List</button>
+      <button class="btn btn-primary" id="add-shopping-btn" aria-label="Create new shopping list">+ New List</button>
     </div>
-    ${arr.length ? arr.map(l => `
-      <div class="shopping-list-card">
-        <h3>${esc(l.name)}</h3>
-        <span>${l.checked_items}/${l.total_items} checked</span>
-      </div>
-    `).join('') : emptyState('shopping_cart', 'No shopping lists yet', '+ Create List', () => showToast('Shopping list creation coming soon', 'info'))}
+    ${arr.length ? arr.map(l => {
+      const allDone = l.total_items > 0 && l.checked_items === l.total_items;
+      return allDone ? `
+        <div class="celebration-banner" data-list-id="${l.id}">
+          <canvas class="confetti-canvas" id="confetti-${l.id}"></canvas>
+          <h3>🎉 All done!</h3>
+          <p>${esc(l.name)} — all items checked off</p>
+        </div>
+      ` : `
+        <div class="shopping-list-card" data-list-id="${l.id}">
+          <h3>${esc(l.name)}</h3>
+          <span>${l.checked_items}/${l.total_items} checked</span>
+        </div>
+      `;
+    }).join('') : emptyState('shopping_cart', 'No shopping lists yet', '+ Create List', () => showToast('Shopping list creation coming soon', 'info'))}
   `;
+
+  // UX-15: confetti for completed lists
+  arr.forEach(l => {
+    if (l.total_items > 0 && l.checked_items === l.total_items) {
+      const canvas = document.getElementById(`confetti-${l.id}`);
+      if (canvas) runConfetti(canvas);
+    }
+  });
+
+  // UX-04: Pull to refresh
+  setupPullToRefresh(el, 'ptr-shopping', () => renderShopping(el));
 }
 
 // ════════════════════════════════════════════════════
-// Nutrition View (with PO-03)
+// Nutrition View (with PO-03, DE-07 trend chart)
 // ════════════════════════════════════════════════════
 async function renderNutrition(el) {
-  const summary = await api.get(`/api/nutrition/summary/${today()}`);
+  const [summary, trendData] = await Promise.all([
+    api.get(`/api/nutrition/summary/${today()}`),
+    api.get('/api/stats/nutrition?days=7'),
+  ]);
   const hasData = summary.totals && (summary.totals.calories > 0);
+  const hasTrend = Array.isArray(trendData) && trendData.length > 0;
+
   el.innerHTML = `
     <div class="view-header"><h2>Nutrition Tracker</h2></div>
     ${hasData ? `
@@ -855,7 +1057,27 @@ async function renderNutrition(el) {
         </div>
       </div>
     ` : emptyState('monitoring', 'No nutrition data logged today', 'Log a meal first', () => { currentView = 'today'; render(); })}
+
+    ${hasTrend ? `
+      <div class="chart-container">
+        <h3>Weekly Nutrition Trend</h3>
+        <canvas id="nutrition-chart" class="chart-canvas" aria-label="Weekly nutrition trend line chart" role="img"></canvas>
+        <div class="chart-legend">
+          <div class="chart-legend-item"><div class="chart-legend-swatch" style="background:var(--accent)"></div> Calories</div>
+          <div class="chart-legend-item"><div class="chart-legend-swatch" style="background:var(--success)"></div> Protein (g)</div>
+          <div class="chart-legend-item"><div class="chart-legend-swatch" style="background:var(--warning)"></div> Carbs (g)</div>
+          <div class="chart-legend-item"><div class="chart-legend-swatch" style="background:#F97316"></div> Fat (g)</div>
+        </div>
+      </div>
+    ` : ''}
   `;
+
+  // DE-07: Render chart
+  if (hasTrend) {
+    requestAnimationFrame(() => {
+      drawNutritionChart(document.getElementById('nutrition-chart'), trendData);
+    });
+  }
 }
 
 // ════════════════════════════════════════════════════
@@ -1573,13 +1795,38 @@ function updateTimerDisplay() {
 
 // ─── Modal helpers ───
 function showModal(html) {
+  const overlay = document.getElementById('modal-overlay');
+  const modal = document.getElementById('modal');
+  overlay.classList.remove('bottom-sheet');
   document.getElementById('modal-content').innerHTML = html;
-  document.getElementById('modal-overlay').classList.remove('hidden');
+  overlay.classList.remove('hidden');
+  // UX-06: Focus trap — focus modal
+  modal.focus();
+  // Trap tab
+  overlay._trapHandler = (e) => {
+    if (e.key !== 'Tab') return;
+    const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
+  overlay.addEventListener('keydown', overlay._trapHandler);
 }
 
 function closeModal() {
-  document.getElementById('modal-overlay').classList.add('hidden');
+  const overlay = document.getElementById('modal-overlay');
+  overlay.classList.add('hidden');
+  overlay.classList.remove('bottom-sheet');
   document.getElementById('modal-content').innerHTML = '';
+  if (overlay._trapHandler) {
+    overlay.removeEventListener('keydown', overlay._trapHandler);
+    overlay._trapHandler = null;
+  }
 }
 
 // ─── Toast ───
@@ -1588,8 +1835,313 @@ function showToast(msg, type = 'error') {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.textContent = msg;
+  toast.setAttribute('role', 'alert');
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 4000);
+}
+
+// ════════════════════════════════════════════════════
+// UX-01: Bottom Navigation (Mobile)
+// ════════════════════════════════════════════════════
+function setupBottomNav() {
+  const moreMenu = document.getElementById('bottom-nav-more');
+
+  document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const view = btn.dataset.view;
+      if (view === 'more') {
+        moreMenu?.classList.toggle('open');
+        btn.setAttribute('aria-expanded', moreMenu?.classList.contains('open'));
+        return;
+      }
+      moreMenu?.classList.remove('open');
+      currentView = view;
+      render();
+    });
+  });
+
+  document.querySelectorAll('.bottom-nav-more-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      moreMenu?.classList.remove('open');
+      currentView = btn.dataset.view;
+      render();
+    });
+  });
+
+  // Close more menu on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.bottom-nav-item[data-view="more"]') && !e.target.closest('.bottom-nav-more-menu')) {
+      moreMenu?.classList.remove('open');
+    }
+  });
+}
+
+function syncBottomNav() {
+  const primaryViews = ['today', 'planner', 'recipes', 'shopping'];
+  document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+    if (btn.dataset.view === 'more') {
+      btn.classList.toggle('active', !primaryViews.includes(currentView));
+    } else {
+      btn.classList.toggle('active', btn.dataset.view === currentView);
+    }
+  });
+  document.querySelectorAll('.bottom-nav-more-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === currentView);
+  });
+}
+
+// ════════════════════════════════════════════════════
+// UX-03: Swipe Gestures
+// ════════════════════════════════════════════════════
+function setupSwipeGestures(el, { onSwipeLeft, onSwipeRight, threshold = 50 }) {
+  if (!el) return;
+  let startX = 0;
+  let startY = 0;
+  let swiping = false;
+
+  el.addEventListener('touchstart', (e) => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    swiping = true;
+  }, { passive: true });
+
+  el.addEventListener('touchmove', (e) => {
+    if (!swiping) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    // Only horizontal swipes
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 20) {
+      el.classList.add('swiping');
+    }
+  }, { passive: true });
+
+  el.addEventListener('touchend', (e) => {
+    if (!swiping) return;
+    swiping = false;
+    el.classList.remove('swiping');
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    if (Math.abs(dx) > threshold && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) onSwipeLeft();
+      else onSwipeRight();
+    }
+  }, { passive: true });
+}
+
+// ════════════════════════════════════════════════════
+// UX-04: Pull-to-Refresh
+// ════════════════════════════════════════════════════
+function setupPullToRefresh(container, ptrId, refreshFn) {
+  const ptrEl = document.getElementById(ptrId);
+  if (!ptrEl) return;
+  let startY = 0;
+  let pulling = false;
+
+  container.addEventListener('touchstart', (e) => {
+    if (window.scrollY === 0) {
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }
+  }, { passive: true });
+
+  container.addEventListener('touchmove', (e) => {
+    if (!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 60 && window.scrollY === 0) {
+      ptrEl.classList.add('pulling');
+    }
+  }, { passive: true });
+
+  container.addEventListener('touchend', async () => {
+    if (!pulling) return;
+    pulling = false;
+    if (ptrEl.classList.contains('pulling')) {
+      ptrEl.classList.remove('pulling');
+      ptrEl.classList.add('refreshing');
+      await refreshFn();
+    }
+  }, { passive: true });
+}
+
+// ════════════════════════════════════════════════════
+// UX-06: Keyboard Navigation
+// ════════════════════════════════════════════════════
+function setupKeyboardNav() {
+  // Escape closes modals (already handled in setupNav)
+  // Tab through nav items
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.setAttribute('tabindex', '0');
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); el.click(); }
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════
+// UX-15: Confetti Animation
+// ════════════════════════════════════════════════════
+function runConfetti(canvas) {
+  // Respect prefers-reduced-motion
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.offsetWidth;
+  canvas.height = canvas.parentElement.offsetHeight;
+
+  const particles = [];
+  const colors = ['#F59E0B', '#10B981', '#6366F1', '#EC4899', '#8B5CF6', '#EF4444'];
+
+  for (let i = 0; i < 50; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      w: Math.random() * 8 + 4,
+      h: Math.random() * 6 + 2,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      vy: Math.random() * 2 + 1,
+      vx: (Math.random() - 0.5) * 2,
+      rotation: Math.random() * 360,
+      rv: (Math.random() - 0.5) * 6,
+    });
+  }
+
+  let frame = 0;
+  function animate() {
+    if (frame > 120) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of particles) {
+      p.y += p.vy;
+      p.x += p.vx;
+      p.rotation += p.rv;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation * Math.PI / 180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    frame++;
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+// ════════════════════════════════════════════════════
+// PO-12: "What's for today?" Notification
+// ════════════════════════════════════════════════════
+async function fireWhatsForTodayNotification() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+
+  // Check settings
+  try {
+    const prefs = await api.get('/api/notifications/preferences');
+    if (prefs && prefs.meal_reminder === false) return;
+  } catch {}
+
+  // Get today's meals
+  try {
+    const todayStr = today();
+    const data = await api.get(`/api/meals/${todayStr}`);
+    const meals = data.meals || [];
+    const items = meals.flatMap(m => (m.items || []).map(i => i.recipe_name || i.custom_name || 'Custom'));
+    if (!items.length) return;
+
+    const body = items.slice(0, 5).join(', ') + (items.length > 5 ? ` +${items.length - 5} more` : '');
+    new Notification("What's for today?", { body, icon: '/manifest.json', tag: 'mealflow-today' });
+  } catch {}
+}
+
+// ════════════════════════════════════════════════════
+// DE-07: Nutrition Trend Chart (Canvas API)
+// ════════════════════════════════════════════════════
+function drawNutritionChart(canvas, data) {
+  if (!canvas || !data.length) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+  const pad = { top: 20, right: 20, bottom: 40, left: 50 };
+  const chartW = W - pad.left - pad.right;
+  const chartH = H - pad.top - pad.bottom;
+
+  const series = [
+    { key: 'calories', color: '#6366F1', label: 'Calories' },
+    { key: 'protein', color: '#22C55E', label: 'Protein' },
+    { key: 'carbs', color: '#F59E0B', label: 'Carbs' },
+    { key: 'fat', color: '#F97316', label: 'Fat' },
+  ];
+
+  // Find max value for scaling (use separate scale for calories vs macros)
+  const maxCal = Math.max(...data.map(d => d.calories || 0), 1);
+  const maxMacro = Math.max(...data.flatMap(d => [d.protein || 0, d.carbs || 0, d.fat || 0]), 1);
+
+  // Draw grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (chartH / 4) * i;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(pad.left + chartW, y);
+    ctx.stroke();
+  }
+
+  // Draw Y-axis labels (calories)
+  ctx.fillStyle = '#8B9AB5';
+  ctx.font = '11px Inter, sans-serif';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (chartH / 4) * i;
+    const val = Math.round(maxCal * (1 - i / 4));
+    ctx.fillText(String(val), pad.left - 8, y + 4);
+  }
+
+  // Draw X-axis labels (dates)
+  ctx.textAlign = 'center';
+  data.forEach((d, i) => {
+    const x = pad.left + (i / Math.max(data.length - 1, 1)) * chartW;
+    const dateStr = d.date ? d.date.slice(5) : '';
+    ctx.fillText(dateStr, x, H - pad.bottom + 20);
+  });
+
+  // Draw each series
+  series.forEach(({ key, color }) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+
+    const max = key === 'calories' ? maxCal : maxMacro;
+
+    data.forEach((d, i) => {
+      const x = pad.left + (i / Math.max(data.length - 1, 1)) * chartW;
+      const val = d[key] || 0;
+      const y = pad.top + chartH - (val / max) * chartH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Draw dots
+    data.forEach((d, i) => {
+      const x = pad.left + (i / Math.max(data.length - 1, 1)) * chartW;
+      const val = d[key] || 0;
+      const y = pad.top + chartH - (val / max) * chartH;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  });
 }
 
 // ─── Global helpers (used by onclick in HTML) ───
