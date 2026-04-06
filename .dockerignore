@@ -1,0 +1,11 @@
+node_modules
+.git
+tests
+coverage
+backups
+.env
+*.md
+.github
+.c8rc.json
+eslint.config.js
+docker-compose*.yml

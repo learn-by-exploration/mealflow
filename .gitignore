@@ -1,5 +1,8 @@
 node_modules/
-data/
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/images/
 *.db
 *.db-shm
 *.db-wal

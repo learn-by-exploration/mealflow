@@ -1,0 +1,129 @@
+[
+  {
+    "name": "Shorshe Ilish",
+    "description": "Hilsa fish cooked in pungent mustard paste, a Bengali delicacy",
+    "servings": 4,
+    "prep_time": 20,
+    "cook_time": 25,
+    "cuisine": "indian",
+    "region": "bengali",
+    "difficulty": "medium",
+    "cooking_method": "bhuna",
+    "meal_suitability": ["lunch", "dinner"],
+    "category": "main",
+    "ingredients": [
+      { "name": "Mustard Seeds (Rai)", "quantity": 30, "unit": "g" },
+      { "name": "Mustard Oil", "quantity": 30, "unit": "ml" },
+      { "name": "Turmeric (Haldi)", "quantity": 3, "unit": "g" },
+      { "name": "Green Chilli", "quantity": 10, "unit": "g" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["non-vegetarian", "fish", "mustard"]
+  },
+  {
+    "name": "Aloo Posto",
+    "description": "Potatoes cooked with poppy seed paste, a quintessential Bengali comfort dish",
+    "servings": 4,
+    "prep_time": 10,
+    "cook_time": 20,
+    "cuisine": "indian",
+    "region": "bengali",
+    "difficulty": "easy",
+    "cooking_method": "bhuna",
+    "meal_suitability": ["lunch", "dinner"],
+    "category": "main",
+    "ingredients": [
+      { "name": "Potato", "quantity": 400, "unit": "g" },
+      { "name": "Mustard Oil", "quantity": 20, "unit": "ml" },
+      { "name": "Turmeric (Haldi)", "quantity": 3, "unit": "g" },
+      { "name": "Green Chilli", "quantity": 5, "unit": "g" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "comfort", "simple"]
+  },
+  {
+    "name": "Cholar Dal",
+    "description": "Bengali-style chana dal with coconut and raisins, mildly sweet and fragrant",
+    "servings": 4,
+    "prep_time": 30,
+    "cook_time": 30,
+    "cuisine": "indian",
+    "region": "bengali",
+    "difficulty": "easy",
+    "cooking_method": "pressure-cooked",
+    "meal_suitability": ["lunch", "dinner"],
+    "category": "main",
+    "ingredients": [
+      { "name": "Chana Dal", "quantity": 200, "unit": "g" },
+      { "name": "Coconut (Fresh)", "quantity": 30, "unit": "g" },
+      { "name": "Ghee", "quantity": 15, "unit": "g" },
+      { "name": "Ginger", "quantity": 10, "unit": "g" },
+      { "name": "Turmeric (Haldi)", "quantity": 3, "unit": "g" },
+      { "name": "Cumin Seeds (Jeera)", "quantity": 3, "unit": "g" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "protein-rich", "festive"]
+  },
+  {
+    "name": "Luchi",
+    "description": "Deep-fried puffed bread made from refined flour, a Bengali celebration staple",
+    "servings": 4,
+    "prep_time": 20,
+    "cook_time": 15,
+    "cuisine": "indian",
+    "region": "bengali",
+    "difficulty": "medium",
+    "cooking_method": "deep-fried",
+    "meal_suitability": ["breakfast", "lunch"],
+    "category": "main",
+    "ingredients": [
+      { "name": "Wheat Flour (Atta)", "quantity": 250, "unit": "g" },
+      { "name": "Ghee", "quantity": 20, "unit": "g" },
+      { "name": "Sunflower Oil", "quantity": 200, "unit": "ml" },
+      { "name": "Salt", "quantity": 3, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "bread", "festive", "deep-fried"]
+  },
+  {
+    "name": "Mishti Doi",
+    "description": "Sweetened caramelized yogurt, a Bengali dessert classic",
+    "servings": 4,
+    "prep_time": 15,
+    "cook_time": 10,
+    "cuisine": "indian",
+    "region": "bengali",
+    "difficulty": "easy",
+    "cooking_method": "no-cook",
+    "meal_suitability": ["lunch", "dinner", "snack"],
+    "category": "dessert",
+    "ingredients": [
+      { "name": "Milk", "quantity": 500, "unit": "ml" },
+      { "name": "Curd (Yogurt)", "quantity": 50, "unit": "g" },
+      { "name": "Jaggery (Gur)", "quantity": 80, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "dessert", "sweet"]
+  },
+  {
+    "name": "Bhapa Aloo",
+    "description": "Steamed spiced potatoes with mustard and coconut, a Bengali delicacy",
+    "servings": 4,
+    "prep_time": 15,
+    "cook_time": 20,
+    "cuisine": "indian",
+    "region": "bengali",
+    "difficulty": "easy",
+    "cooking_method": "steamed",
+    "meal_suitability": ["lunch", "dinner"],
+    "category": "side_dish",
+    "ingredients": [
+      { "name": "Potato", "quantity": 400, "unit": "g" },
+      { "name": "Mustard Seeds (Rai)", "quantity": 15, "unit": "g" },
+      { "name": "Coconut (Fresh)", "quantity": 30, "unit": "g" },
+      { "name": "Green Chilli", "quantity": 5, "unit": "g" },
+      { "name": "Mustard Oil", "quantity": 15, "unit": "ml" },
+      { "name": "Turmeric (Haldi)", "quantity": 3, "unit": "g" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "steamed", "side"]
+  }
+]

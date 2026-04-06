@@ -32,7 +32,36 @@ const deps = { db, dbDir: config.dbDir, ...helpers };
 // ─── Audit logger ───
 const audit = createAuditLogger(db);
 deps.audit = audit;
-setInterval(() => audit.purge(), 24 * 60 * 60 * 1000);
+setInterval(() => {
+  audit.purge();
+  // Issue 12: Clean expired sessions
+  try {
+    db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
+  } catch (err) { logger.warn({ err }, 'Session cleanup failed'); }
+}, 24 * 60 * 60 * 1000);
+
+// Issue 9: Automated backup scheduling
+if (!config.isTest) {
+  setInterval(() => {
+    try {
+      const backupDir = path.join(config.dbDir, '..', 'backups');
+      if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+      const dbPath = path.join(config.dbDir, 'mealflow.db');
+      if (fs.existsSync(dbPath)) {
+        const date = new Date().toISOString().slice(0, 10);
+        const dest = path.join(backupDir, `mealflow-${date}.db`);
+        db.backup(dest).then(() => {
+          // Rotate: keep last N backups
+          const files = fs.readdirSync(backupDir).filter(f => f.startsWith('mealflow-') && f.endsWith('.db')).sort();
+          while (files.length > config.backup.retainCount) {
+            fs.unlinkSync(path.join(backupDir, files.shift()));
+          }
+          logger.info({ dest }, 'Backup completed');
+        }).catch(err => logger.warn({ err }, 'Backup failed'));
+      }
+    } catch (err) { logger.warn({ err }, 'Backup failed'); }
+  }, config.backup.intervalHours * 3600 * 1000);
+}
 
 const { requireAuth, optionalAuth } = createAuthMiddleware(db);
 

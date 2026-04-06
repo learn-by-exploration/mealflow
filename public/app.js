@@ -24,6 +24,27 @@ async function init() {
   } catch { window.location.href = '/login'; return; }
 
   setApiErrorHandler(showToast);
+
+  // Issue 4: Read initial view from URL path
+  const pathView = window.location.pathname.replace(/^\//, '').split('/')[0];
+  const validViews = ['planner','recipes','shopping','nutrition','settings','pantry','polls','templates','ingredients','dashboard'];
+  if (pathView && validViews.includes(pathView)) {
+    currentView = pathView;
+  }
+
+  // Issue 5: Handle browser back/forward
+  window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.view) {
+      currentView = e.state.view;
+      render();
+    }
+  });
+
+  // Issue 6: Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
   setupNav();
   setupBottomNav();
   setupKeyboardNav();
@@ -72,6 +93,12 @@ function setupNav() {
 
 // ─── Render ───
 async function render() {
+  // Issue 5: Update browser URL on view change
+  const urlPath = currentView === 'today' ? '/' : '/' + currentView;
+  if (window.location.pathname !== urlPath) {
+    history.pushState({ view: currentView }, '', urlPath);
+  }
+
   // Sync sidebar
   document.querySelectorAll('.nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.view === currentView);
@@ -379,7 +406,7 @@ async function renderToday(el) {
                   <button class="btn btn-sm btn-text meal-history-btn" data-slot="${type}" title="Repeat recent" aria-label="Repeat recent ${SLOT_LABELS[type] || type}">
                     <span class="material-icons-round" style="font-size:1rem">history</span>
                   </button>
-                  <button class="btn btn-sm btn-outline" onclick="window._addMealItem('${todayStr}', '${type}')" aria-label="Add item to ${SLOT_LABELS[type] || type}">+ Add</button>
+                  <button class="btn btn-sm btn-outline" data-action="add-meal" data-date="${todayStr}" data-slot="${type}" aria-label="Add item to ${SLOT_LABELS[type] || type}">+ Add</button>
                 </div>
               </div>
               <div class="meal-items">
@@ -415,6 +442,11 @@ async function renderToday(el) {
 
   document.getElementById('plan-first-meal')?.addEventListener('click', () => {
     currentView = 'planner'; render();
+  });
+
+  // CSP-safe event delegation for add-meal buttons
+  el.querySelectorAll('[data-action="add-meal"]').forEach(btn => {
+    btn.addEventListener('click', () => window._addMealItem(btn.dataset.date, btn.dataset.slot));
   });
 
   // PO-14: Quick-add from history
@@ -857,10 +889,18 @@ async function showRecipeDetail(id) {
       <p>${recipe.nutrition.calories} cal · ${recipe.nutrition.protein}g protein · ${recipe.nutrition.carbs}g carbs · ${recipe.nutrition.fat}g fat</p>
     ` : ''}
     <div class="modal-actions">
-      <button class="btn btn-outline" onclick="window._editRecipe(${recipe.id})">Edit</button>
-      <button class="btn btn-danger" onclick="window._deleteRecipe(${recipe.id})">Delete</button>
+      <button class="btn btn-outline" data-action="edit-recipe" data-id="${recipe.id}">Edit</button>
+      <button class="btn btn-danger" data-action="delete-recipe" data-id="${recipe.id}">Delete</button>
     </div>
   `);
+
+  // CSP-safe event delegation for recipe detail actions
+  document.querySelectorAll('[data-action="edit-recipe"]').forEach(btn => {
+    btn.addEventListener('click', () => window._editRecipe(parseInt(btn.dataset.id)));
+  });
+  document.querySelectorAll('[data-action="delete-recipe"]').forEach(btn => {
+    btn.addEventListener('click', () => window._deleteRecipe(parseInt(btn.dataset.id)));
+  });
 
   // PO-15: Timer buttons
   document.querySelectorAll('.timer-start-btn').forEach(btn => {

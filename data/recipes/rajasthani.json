@@ -1,0 +1,121 @@
+[
+  {
+    "name": "Dal Baati Churma",
+    "description": "Baked wheat dumplings with five-lentil dal and sweet churma, signature Rajasthani feast",
+    "servings": 4,
+    "prep_time": 30,
+    "cook_time": 45,
+    "cuisine": "indian",
+    "region": "rajasthani",
+    "difficulty": "hard",
+    "cooking_method": "tandoor",
+    "meal_suitability": ["lunch", "dinner"],
+    "category": "main",
+    "ingredients": [
+      { "name": "Wheat Flour (Atta)", "quantity": 300, "unit": "g" },
+      { "name": "Ghee", "quantity": 80, "unit": "g" },
+      { "name": "Toor Dal", "quantity": 50, "unit": "g" },
+      { "name": "Chana Dal", "quantity": 50, "unit": "g" },
+      { "name": "Moong Dal", "quantity": 50, "unit": "g" },
+      { "name": "Masoor Dal", "quantity": 50, "unit": "g" },
+      { "name": "Turmeric (Haldi)", "quantity": 3, "unit": "g" },
+      { "name": "Red Chilli Powder", "quantity": 3, "unit": "g" },
+      { "name": "Jaggery (Gur)", "quantity": 50, "unit": "g" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "festive", "rich"]
+  },
+  {
+    "name": "Gatte ki Sabzi",
+    "description": "Gram flour dumplings in spiced yogurt gravy, a Rajasthani staple",
+    "servings": 4,
+    "prep_time": 20,
+    "cook_time": 30,
+    "cuisine": "indian",
+    "region": "rajasthani",
+    "difficulty": "medium",
+    "cooking_method": "bhuna",
+    "meal_suitability": ["lunch", "dinner"],
+    "category": "main",
+    "ingredients": [
+      { "name": "Besan (Gram Flour)", "quantity": 200, "unit": "g" },
+      { "name": "Curd (Yogurt)", "quantity": 200, "unit": "g" },
+      { "name": "Cumin Seeds (Jeera)", "quantity": 3, "unit": "g" },
+      { "name": "Red Chilli Powder", "quantity": 3, "unit": "g" },
+      { "name": "Turmeric (Haldi)", "quantity": 3, "unit": "g" },
+      { "name": "Coriander Powder (Dhaniya)", "quantity": 3, "unit": "g" },
+      { "name": "Ghee", "quantity": 20, "unit": "g" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "no-onion-garlic", "curry"]
+  },
+  {
+    "name": "Ker Sangri",
+    "description": "Dried desert beans and berries cooked with spices, a Rajasthani desert delicacy",
+    "servings": 4,
+    "prep_time": 480,
+    "cook_time": 25,
+    "cuisine": "indian",
+    "region": "rajasthani",
+    "difficulty": "medium",
+    "cooking_method": "bhuna",
+    "meal_suitability": ["lunch", "dinner"],
+    "category": "side_dish",
+    "ingredients": [
+      { "name": "Mustard Oil", "quantity": 20, "unit": "ml" },
+      { "name": "Red Chilli Powder", "quantity": 3, "unit": "g" },
+      { "name": "Turmeric (Haldi)", "quantity": 2, "unit": "g" },
+      { "name": "Coriander Powder (Dhaniya)", "quantity": 3, "unit": "g" },
+      { "name": "Cumin Seeds (Jeera)", "quantity": 3, "unit": "g" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "desert-cuisine", "tangy"]
+  },
+  {
+    "name": "Laal Maas",
+    "description": "Fiery red mutton curry with Mathania chillies, a Rajput warrior dish",
+    "servings": 4,
+    "prep_time": 30,
+    "cook_time": 60,
+    "cuisine": "indian",
+    "region": "rajasthani",
+    "difficulty": "hard",
+    "cooking_method": "bhuna",
+    "meal_suitability": ["lunch", "dinner"],
+    "category": "main",
+    "ingredients": [
+      { "name": "Onion", "quantity": 200, "unit": "g" },
+      { "name": "Curd (Yogurt)", "quantity": 100, "unit": "g" },
+      { "name": "Red Chilli Powder", "quantity": 10, "unit": "g" },
+      { "name": "Garlic", "quantity": 20, "unit": "g" },
+      { "name": "Ginger", "quantity": 15, "unit": "g" },
+      { "name": "Ghee", "quantity": 40, "unit": "g" },
+      { "name": "Coriander Powder (Dhaniya)", "quantity": 5, "unit": "g" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["non-vegetarian", "spicy", "rich"]
+  },
+  {
+    "name": "Pyaaz Kachori",
+    "description": "Crispy deep-fried pastry filled with spiced onion mixture",
+    "servings": 4,
+    "prep_time": 30,
+    "cook_time": 20,
+    "cuisine": "indian",
+    "region": "rajasthani",
+    "difficulty": "medium",
+    "cooking_method": "deep-fried",
+    "meal_suitability": ["breakfast", "snack", "tiffin"],
+    "category": "snack",
+    "ingredients": [
+      { "name": "Wheat Flour (Atta)", "quantity": 200, "unit": "g" },
+      { "name": "Onion", "quantity": 300, "unit": "g" },
+      { "name": "Cumin Seeds (Jeera)", "quantity": 5, "unit": "g" },
+      { "name": "Red Chilli Powder", "quantity": 3, "unit": "g" },
+      { "name": "Coriander Powder (Dhaniya)", "quantity": 3, "unit": "g" },
+      { "name": "Sunflower Oil", "quantity": 150, "unit": "ml" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "deep-fried", "street-food"]
+  }
+]

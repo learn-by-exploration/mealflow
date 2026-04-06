@@ -1,0 +1,122 @@
+[
+  {
+    "name": "Vada Pav",
+    "description": "Mumbai's iconic spicy potato fritter in a bun with chutneys",
+    "servings": 4,
+    "prep_time": 20,
+    "cook_time": 15,
+    "cuisine": "indian",
+    "region": "maharashtrian",
+    "difficulty": "medium",
+    "cooking_method": "deep-fried",
+    "meal_suitability": ["snack", "breakfast", "tiffin"],
+    "category": "snack",
+    "ingredients": [
+      { "name": "Potato", "quantity": 400, "unit": "g" },
+      { "name": "Besan (Gram Flour)", "quantity": 100, "unit": "g" },
+      { "name": "Green Chilli", "quantity": 10, "unit": "g" },
+      { "name": "Garlic", "quantity": 10, "unit": "g" },
+      { "name": "Mustard Seeds (Rai)", "quantity": 3, "unit": "g" },
+      { "name": "Turmeric (Haldi)", "quantity": 3, "unit": "g" },
+      { "name": "Sunflower Oil", "quantity": 100, "unit": "ml" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "street-food", "deep-fried"]
+  },
+  {
+    "name": "Misal Pav",
+    "description": "Spicy sprouted moth bean curry topped with farsan, served with pav",
+    "servings": 4,
+    "prep_time": 20,
+    "cook_time": 30,
+    "cuisine": "indian",
+    "region": "maharashtrian",
+    "difficulty": "medium",
+    "cooking_method": "bhuna",
+    "meal_suitability": ["breakfast", "lunch", "snack"],
+    "category": "main",
+    "ingredients": [
+      { "name": "Moong Dal", "quantity": 200, "unit": "g" },
+      { "name": "Onion", "quantity": 100, "unit": "g" },
+      { "name": "Tomato", "quantity": 100, "unit": "g" },
+      { "name": "Coconut (Fresh)", "quantity": 30, "unit": "g" },
+      { "name": "Red Chilli Powder", "quantity": 5, "unit": "g" },
+      { "name": "Garam Masala", "quantity": 3, "unit": "g" },
+      { "name": "Mustard Seeds (Rai)", "quantity": 3, "unit": "g" },
+      { "name": "Sunflower Oil", "quantity": 20, "unit": "ml" },
+      { "name": "Lemon Juice", "quantity": 10, "unit": "ml" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "spicy", "protein-rich", "street-food"]
+  },
+  {
+    "name": "Puran Poli",
+    "description": "Sweet stuffed flatbread filled with jaggery and chana dal, festive Maharashtrian dessert bread",
+    "servings": 4,
+    "prep_time": 30,
+    "cook_time": 20,
+    "cuisine": "indian",
+    "region": "maharashtrian",
+    "difficulty": "medium",
+    "cooking_method": "tawa",
+    "meal_suitability": ["lunch", "dinner", "snack"],
+    "category": "dessert",
+    "ingredients": [
+      { "name": "Chana Dal", "quantity": 200, "unit": "g" },
+      { "name": "Wheat Flour (Atta)", "quantity": 200, "unit": "g" },
+      { "name": "Jaggery (Gur)", "quantity": 150, "unit": "g" },
+      { "name": "Ghee", "quantity": 30, "unit": "g" },
+      { "name": "Turmeric (Haldi)", "quantity": 2, "unit": "g" },
+      { "name": "Salt", "quantity": 3, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "sweet", "festive"]
+  },
+  {
+    "name": "Sabudana Khichdi",
+    "description": "Tempered tapioca pearls with peanuts and potato, a fasting favourite",
+    "servings": 4,
+    "prep_time": 240,
+    "cook_time": 15,
+    "cuisine": "indian",
+    "region": "maharashtrian",
+    "difficulty": "easy",
+    "cooking_method": "stir-fried",
+    "meal_suitability": ["breakfast", "snack"],
+    "category": "main",
+    "ingredients": [
+      { "name": "Potato", "quantity": 100, "unit": "g" },
+      { "name": "Cumin Seeds (Jeera)", "quantity": 3, "unit": "g" },
+      { "name": "Green Chilli", "quantity": 5, "unit": "g" },
+      { "name": "Curry Leaves", "quantity": 2, "unit": "g" },
+      { "name": "Ghee", "quantity": 15, "unit": "g" },
+      { "name": "Lemon Juice", "quantity": 10, "unit": "ml" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "fasting", "gluten-free"]
+  },
+  {
+    "name": "Bharli Vangi",
+    "description": "Stuffed baby eggplant with coconut-peanut masala, a Maharashtrian classic",
+    "servings": 4,
+    "prep_time": 20,
+    "cook_time": 25,
+    "cuisine": "indian",
+    "region": "maharashtrian",
+    "difficulty": "medium",
+    "cooking_method": "bhuna",
+    "meal_suitability": ["lunch", "dinner"],
+    "category": "main",
+    "ingredients": [
+      { "name": "Brinjal (Baingan)", "quantity": 400, "unit": "g" },
+      { "name": "Coconut (Fresh)", "quantity": 40, "unit": "g" },
+      { "name": "Onion", "quantity": 100, "unit": "g" },
+      { "name": "Coriander Powder (Dhaniya)", "quantity": 5, "unit": "g" },
+      { "name": "Red Chilli Powder", "quantity": 3, "unit": "g" },
+      { "name": "Jaggery (Gur)", "quantity": 10, "unit": "g" },
+      { "name": "Tamarind", "quantity": 10, "unit": "g" },
+      { "name": "Sunflower Oil", "quantity": 20, "unit": "ml" },
+      { "name": "Salt", "quantity": 5, "unit": "g" }
+    ],
+    "tags": ["vegetarian", "stuffed", "tangy"]
+  }
+]
