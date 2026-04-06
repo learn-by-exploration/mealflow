@@ -268,5 +268,28 @@ module.exports = function nutritionRoutes({ db, enrichRecipe, calcPersonDailyNut
     });
   });
 
+  // ─── CSV export for nutrition ───
+  router.get('/api/nutrition/export', (req, res) => {
+    const { format, start, end } = req.query;
+    if (!start || !end) return res.status(400).json({ error: 'start and end query parameters required', code: 'VALIDATION_ERROR' });
+
+    const rows = db.prepare(
+      'SELECT * FROM nutrition_log WHERE user_id = ? AND date >= ? AND date <= ? ORDER BY date, created_at'
+    ).all(req.userId, start, end);
+
+    if (format === 'csv') {
+      const header = 'date,meal_type,custom_name,servings,calories,protein,carbs,fat';
+      const lines = rows.map(r =>
+        `${r.date},${r.meal_type},${(r.custom_name || '').replace(/,/g, ';')},${r.servings},${r.calories},${r.protein},${r.carbs},${r.fat}`
+      );
+      const csv = [header, ...lines].join('\n');
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="nutrition.csv"');
+      return res.send(csv);
+    }
+
+    res.json(rows);
+  });
+
   return router;
 };

@@ -343,5 +343,52 @@ module.exports = function mealsRoutes({ db, enrichRecipe }) {
     res.status(201).json(target);
   });
 
+  // ─── Bulk meal plan operations ───
+  router.post('/api/meals/bulk', (req, res) => {
+    const { meals } = req.body;
+    if (!Array.isArray(meals) || meals.length === 0) {
+      return res.status(400).json({ error: 'meals array required and must not be empty', code: 'VALIDATION_ERROR' });
+    }
+
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    const validMealTypes = ['breakfast', 'morning_snack', 'lunch', 'evening_snack', 'dinner', 'custom'];
+
+    // Validate all entries first
+    for (const m of meals) {
+      if (!m.date || !dateRe.test(m.date)) {
+        return res.status(400).json({ error: `Invalid date: ${m.date}`, code: 'VALIDATION_ERROR' });
+      }
+      if (!m.meal_type || !validMealTypes.includes(m.meal_type)) {
+        return res.status(400).json({ error: `Invalid meal_type: ${m.meal_type}`, code: 'VALIDATION_ERROR' });
+      }
+    }
+
+    const insertPlan = db.prepare('INSERT INTO meal_plans (user_id, date, meal_type) VALUES (?, ?, ?)');
+    const insertItem = db.prepare('INSERT INTO meal_plan_items (meal_plan_id, recipe_id, custom_name, servings, position) VALUES (?, ?, ?, ?, ?)');
+    const findPlan = db.prepare('SELECT id FROM meal_plans WHERE user_id = ? AND date = ? AND meal_type = ?');
+
+    const bulkInsert = db.transaction(() => {
+      let created = 0;
+      for (const m of meals) {
+        let plan = findPlan.get(req.userId, m.date, m.meal_type);
+        if (!plan) {
+          const r = insertPlan.run(req.userId, m.date, m.meal_type);
+          plan = { id: r.lastInsertRowid };
+          created++;
+        }
+        if (m.items && m.items.length) {
+          for (let i = 0; i < m.items.length; i++) {
+            const item = m.items[i];
+            insertItem.run(plan.id, item.recipe_id || null, item.custom_name || '', item.servings || 1, i);
+          }
+        }
+      }
+      return created;
+    });
+
+    const created = bulkInsert();
+    res.status(201).json({ created });
+  });
+
   return router;
 };

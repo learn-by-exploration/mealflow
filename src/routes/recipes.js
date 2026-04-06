@@ -1,10 +1,36 @@
 const { Router } = require('express');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+const crypto = require('crypto');
 const { validate } = require('../middleware/validate');
 const { createRecipe, updateRecipe } = require('../schemas/recipes.schema');
 const { NotFoundError, ForbiddenError, ValidationError } = require('../errors');
 
-module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNextPosition }) {
+module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes, getNextPosition }) {
   const router = Router();
+
+  // ─── Image upload setup ───
+  const imageDir = path.join(dbDir, '..', 'data', 'images');
+  if (!fs.existsSync(imageDir)) fs.mkdirSync(imageDir, { recursive: true });
+
+  const storage = multer.diskStorage({
+    destination: imageDir,
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `recipe-${crypto.randomUUID()}${ext}`);
+    },
+  });
+
+  const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+  const upload = multer({
+    storage,
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      if (allowedMimes.includes(file.mimetype)) return cb(null, true);
+      cb(new ValidationError('Only JPEG, PNG, and WebP images are allowed'));
+    },
+  });
 
   // ─── FTS Search ───
   router.get('/api/recipes/search', (req, res) => {
@@ -130,26 +156,30 @@ module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNe
 
   // ─── List recipes ───
   router.get('/api/recipes', (req, res) => {
-    const { cuisine, difficulty, tag, favorite, q, limit, offset } = req.query;
-    let sql = 'SELECT r.* FROM recipes r WHERE r.user_id = ?';
+    const { cuisine, difficulty, tag, favorite, q } = req.query;
+    let where = 'WHERE r.user_id = ?';
     const params = [req.userId];
 
-    if (cuisine) { sql += ' AND r.cuisine = ?'; params.push(cuisine); }
-    if (difficulty) { sql += ' AND r.difficulty = ?'; params.push(difficulty); }
-    if (favorite === '1') { sql += ' AND r.is_favorite = 1'; }
-    if (q) { sql += ' AND (r.name LIKE ? OR r.description LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }
+    if (cuisine) { where += ' AND r.cuisine = ?'; params.push(cuisine); }
+    if (difficulty) { where += ' AND r.difficulty = ?'; params.push(difficulty); }
+    if (favorite === '1') { where += ' AND r.is_favorite = 1'; }
+    if (q) { where += ' AND (r.name LIKE ? OR r.description LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }
     if (tag) {
-      sql += ' AND r.id IN (SELECT rt.recipe_id FROM recipe_tags rt JOIN tags t ON t.id = rt.tag_id WHERE t.name = ? AND t.user_id = ?)';
+      where += ' AND r.id IN (SELECT rt.recipe_id FROM recipe_tags rt JOIN tags t ON t.id = rt.tag_id WHERE t.name = ? AND t.user_id = ?)';
       params.push(tag, req.userId);
     }
 
-    sql += ' ORDER BY r.position, r.created_at DESC';
+    const total = db.prepare(`SELECT COUNT(*) as cnt FROM recipes r ${where}`).get(...params).cnt;
 
-    if (limit) { sql += ' LIMIT ?'; params.push(parseInt(limit, 10) || 50); }
-    if (offset) { sql += ' OFFSET ?'; params.push(parseInt(offset, 10) || 0); }
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const rawLimit = parseInt(req.query.limit, 10);
+    const limit = (rawLimit > 0 && rawLimit <= 100) ? rawLimit : 20;
+    const offset = (page - 1) * limit;
 
-    const recipes = db.prepare(sql).all(...params);
-    res.json(enrichRecipes(recipes));
+    const sql = `SELECT r.* FROM recipes r ${where} ORDER BY r.position, r.created_at DESC LIMIT ? OFFSET ?`;
+    const recipes = db.prepare(sql).all(...params, limit, offset);
+
+    res.json({ data: enrichRecipes(recipes), total, page, limit });
   });
 
   // ─── Get single recipe ───
@@ -264,6 +294,31 @@ module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNe
     const newVal = recipe.is_favorite ? 0 : 1;
     db.prepare('UPDATE recipes SET is_favorite = ? WHERE id = ?').run(newVal, req.params.id);
     res.json({ is_favorite: newVal });
+  });
+
+  // ─── Upload recipe image ───
+  router.post('/api/recipes/:id/image', (req, res, next) => {
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    if (!recipe) throw new NotFoundError('Recipe', req.params.id);
+
+    upload.single('image')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: 'Image must be under 2MB', code: 'VALIDATION_ERROR' });
+        }
+        if (err instanceof ValidationError) {
+          return res.status(400).json({ error: err.message, code: err.code });
+        }
+        return next(err);
+      }
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image file provided', code: 'VALIDATION_ERROR' });
+      }
+
+      const imageUrl = `/images/${req.file.filename}`;
+      db.prepare('UPDATE recipes SET image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(imageUrl, req.params.id);
+      res.json({ image_url: imageUrl });
+    });
   });
 
   return router;

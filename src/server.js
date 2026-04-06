@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const crypto = require('crypto');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -94,6 +95,15 @@ const authLimiter = config.isTest ? (req, res, next) => next() : rateLimit({
 });
 
 app.use(express.json({ limit: '1mb' }));
+
+// ─── Request ID middleware ───
+app.use((req, res, next) => {
+  const requestId = crypto.randomUUID();
+  res.setHeader('X-Request-Id', requestId);
+  req.requestId = requestId;
+  next();
+});
+
 app.use('/api', (req, res, next) => {
   if (['POST', 'PUT', 'PATCH'].includes(req.method) && !req.body) req.body = {};
   next();
@@ -104,6 +114,9 @@ const compression = require('compression');
 app.use(compression());
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// ─── Serve uploaded images ───
+app.use('/images', express.static(path.join(config.dbDir, 'images')));
 
 // ─── CSRF Protection ───
 const csrfProtection = createCsrfMiddleware();
@@ -118,7 +131,7 @@ if (!config.isTest) {
 
 // ─── Auth middleware on all /api/* routes ───
 app.use('/api', (req, res, next) => {
-  if (req.path.startsWith('/auth/')) return optionalAuth(req, res, next);
+  if (req.path.startsWith('/auth/') || req.path === '/health') return optionalAuth(req, res, next);
   requireAuth(req, res, next);
 });
 
@@ -159,7 +172,26 @@ app.use(require('./routes/calendar')(deps));
 app.use(require('./routes/ai')(deps));
 app.use(require('./routes/cost')(deps));
 
+// ─── Admin: Audit log rotation ───
+app.post('/api/admin/audit/rotate', (req, res) => {
+  const countBefore = db.prepare('SELECT COUNT(*) as cnt FROM audit_log').get().cnt;
+  audit.purge(90);
+  const countAfter = db.prepare('SELECT COUNT(*) as cnt FROM audit_log').get().cnt;
+  res.json({ deleted: countBefore - countAfter, remaining: countAfter });
+});
+
 // ─── Health checks ───
+app.get('/api/health', (req, res) => {
+  let dbOk = false;
+  try { db.prepare('SELECT 1').get(); dbOk = true; } catch {}
+  res.status(dbOk ? 200 : 503).json({
+    status: dbOk ? 'ok' : 'degraded',
+    version: config.version,
+    uptime: Math.floor(process.uptime()),
+    db: dbOk ? 'connected' : 'disconnected',
+  });
+});
+
 app.get('/health', (req, res) => {
   let dbOk = false;
   try { db.prepare('SELECT 1').get(); dbOk = true; } catch {}

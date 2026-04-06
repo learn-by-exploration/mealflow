@@ -22,7 +22,7 @@ function createAuthMiddleware(db) {
     const sid = cookies.mf_sid;
 
     if (!sid) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ error: 'Authentication required', code: 'UNAUTHORIZED' });
     }
 
     const session = db.prepare(
@@ -30,7 +30,7 @@ function createAuthMiddleware(db) {
     ).get(sid);
 
     if (!session) {
-      return res.status(401).json({ error: 'Session expired or invalid' });
+      return res.status(401).json({ error: 'Session expired or invalid', code: 'UNAUTHORIZED' });
     }
 
     req.userId = session.user_id;

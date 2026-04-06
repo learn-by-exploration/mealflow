@@ -10,7 +10,8 @@ describe('Ingredients', () => {
   it('GET /api/ingredients — returns empty list', async () => {
     const res = await agent().get('/api/ingredients');
     assert.equal(res.status, 200);
-    assert.deepEqual(res.body, []);
+    assert.deepEqual(res.body.data, []);
+    assert.equal(res.body.total, 0);
   });
 
   it('POST /api/ingredients — creates ingredient', async () => {
@@ -40,7 +41,7 @@ describe('Ingredients', () => {
     makeIngredient({ name: 'Rice', category: 'grain' });
     const res = await agent().get('/api/ingredients?category=protein');
     assert.equal(res.status, 200);
-    assert.equal(res.body.length, 1);
+    assert.equal(res.body.data.length, 1);
   });
 
   it('POST /api/ingredients/bulk — bulk creates', async () => {

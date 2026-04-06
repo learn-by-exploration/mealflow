@@ -9,14 +9,21 @@ module.exports = function ingredientsRoutes({ db }) {
   // ─── List ingredients ───
   router.get('/api/ingredients', (req, res) => {
     const { category, q } = req.query;
-    let sql = 'SELECT * FROM ingredients WHERE user_id = ?';
+    let where = 'WHERE user_id = ?';
     const params = [req.userId];
 
-    if (category) { sql += ' AND category = ?'; params.push(category); }
-    if (q) { sql += ' AND name LIKE ?'; params.push(`%${q}%`); }
+    if (category) { where += ' AND category = ?'; params.push(category); }
+    if (q) { where += ' AND name LIKE ?'; params.push(`%${q}%`); }
 
-    sql += ' ORDER BY category, name';
-    res.json(db.prepare(sql).all(...params));
+    const total = db.prepare(`SELECT COUNT(*) as cnt FROM ingredients ${where}`).get(...params).cnt;
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const rawLimit = parseInt(req.query.limit, 10);
+    const limit = (rawLimit > 0 && rawLimit <= 100) ? rawLimit : 20;
+    const offset = (page - 1) * limit;
+
+    const sql = `SELECT * FROM ingredients ${where} ORDER BY category, name LIMIT ? OFFSET ?`;
+    res.json({ data: db.prepare(sql).all(...params, limit, offset), total, page, limit });
   });
 
   // ─── Get single ingredient ───

@@ -48,7 +48,7 @@ function validate(schema, source = 'body') {
         const field = e.path.join('.');
         return field ? `${field}: ${e.message}` : e.message;
       }).join(', ');
-      return res.status(400).json({ error: msg });
+      return res.status(400).json({ error: msg, code: 'VALIDATION_ERROR' });
     }
     req[source] = result.data;
     next();

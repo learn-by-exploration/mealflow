@@ -36,7 +36,44 @@ function createHelpers(db) {
   }
 
   function enrichRecipes(recipes) {
-    return recipes.map(r => enrichRecipe(r));
+    if (!recipes.length) return recipes;
+
+    // Batch load all ingredients and tags for all recipes in one query each
+    const ids = recipes.map(r => r.id);
+    const placeholders = ids.map(() => '?').join(',');
+
+    const allIngredients = db.prepare(`
+      SELECT ri.*, i.name AS ingredient_name, i.category AS ingredient_category,
+             i.calories, i.protein, i.carbs, i.fat
+      FROM recipe_ingredients ri
+      JOIN ingredients i ON i.id = ri.ingredient_id
+      WHERE ri.recipe_id IN (${placeholders})
+      ORDER BY ri.position
+    `).all(...ids);
+
+    const allTags = db.prepare(`
+      SELECT t.*, rt.recipe_id FROM tags t
+      JOIN recipe_tags rt ON rt.tag_id = t.id
+      WHERE rt.recipe_id IN (${placeholders})
+      ORDER BY t.name
+    `).all(...ids);
+
+    // Group by recipe_id
+    const ingMap = {};
+    for (const ing of allIngredients) {
+      (ingMap[ing.recipe_id] ||= []).push(ing);
+    }
+    const tagMap = {};
+    for (const tag of allTags) {
+      (tagMap[tag.recipe_id] ||= []).push(tag);
+    }
+
+    for (const r of recipes) {
+      r.ingredients = ingMap[r.id] || [];
+      r.tags = tagMap[r.id] || [];
+      r.nutrition = calcRecipeNutrition(r);
+    }
+    return recipes;
   }
 
   /**

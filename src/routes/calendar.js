@@ -77,5 +77,48 @@ module.exports = function calendarRoutes({ db }) {
     res.json({ days });
   });
 
+  // ─── iCal export ───
+  router.get('/api/calendar/ical', (req, res) => {
+    const { start, end } = req.query;
+    if (!start || !end) return res.status(400).json({ error: 'start and end query parameters required', code: 'VALIDATION_ERROR' });
+
+    const plans = db.prepare(
+      'SELECT mp.*, mpi.id AS item_id, mpi.recipe_id, mpi.custom_name AS item_name, mpi.servings AS item_servings FROM meal_plans mp JOIN meal_plan_items mpi ON mpi.meal_plan_id = mp.id WHERE mp.user_id = ? AND mp.date >= ? AND mp.date <= ? ORDER BY mp.date, mp.meal_type'
+    ).all(req.userId, start, end);
+
+    // Resolve recipe names
+    const events = plans.map(p => {
+      let name = p.item_name || '';
+      if (p.recipe_id && !name) {
+        const recipe = db.prepare('SELECT name FROM recipes WHERE id = ?').get(p.recipe_id);
+        if (recipe) name = recipe.name;
+      }
+      if (!name) name = 'Meal';
+      return { date: p.date, meal_type: p.meal_type, name, item_id: p.item_id };
+    });
+
+    const mealTimeMap = {
+      breakfast: 'T080000', morning_snack: 'T103000', lunch: 'T123000',
+      evening_snack: 'T160000', dinner: 'T193000', custom: 'T120000',
+    };
+
+    let ical = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//MealFlow//EN\r\nCALSCALE:GREGORIAN\r\n';
+
+    for (const ev of events) {
+      const dtStart = ev.date.replace(/-/g, '') + (mealTimeMap[ev.meal_type] || 'T120000');
+      ical += 'BEGIN:VEVENT\r\n';
+      ical += `DTSTART:${dtStart}\r\n`;
+      ical += `SUMMARY:${ev.meal_type} - ${ev.name}\r\n`;
+      ical += `UID:mealflow-${ev.item_id}@mealflow\r\n`;
+      ical += 'END:VEVENT\r\n';
+    }
+
+    ical += 'END:VCALENDAR\r\n';
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="mealflow.ics"');
+    res.send(ical);
+  });
+
   return router;
 };

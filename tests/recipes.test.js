@@ -10,7 +10,8 @@ describe('Recipes', () => {
   it('GET /api/recipes — returns empty list', async () => {
     const res = await agent().get('/api/recipes');
     assert.equal(res.status, 200);
-    assert.deepEqual(res.body, []);
+    assert.deepEqual(res.body.data, []);
+    assert.equal(res.body.total, 0);
   });
 
   it('POST /api/recipes — creates recipe', async () => {
@@ -68,8 +69,8 @@ describe('Recipes', () => {
     makeRecipe({ name: 'Salad' });
     const res = await agent().get('/api/recipes?q=pasta');
     assert.equal(res.status, 200);
-    assert.equal(res.body.length, 1);
-    assert.equal(res.body[0].name, 'Pasta');
+    assert.equal(res.body.data.length, 1);
+    assert.equal(res.body.data[0].name, 'Pasta');
   });
 
   it('GET /api/recipes?cuisine= — filters by cuisine', async () => {
@@ -77,7 +78,7 @@ describe('Recipes', () => {
     makeRecipe({ name: 'Pasta', cuisine: 'Italian' });
     const res = await agent().get('/api/recipes?cuisine=Japanese');
     assert.equal(res.status, 200);
-    assert.equal(res.body.length, 1);
+    assert.equal(res.body.data.length, 1);
   });
 
   it('POST /api/recipes — rejects missing name', async () => {

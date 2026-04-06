@@ -23,6 +23,24 @@ module.exports = function shoppingRoutes({ db }) {
     res.json(list);
   });
 
+  // ─── List shopping list items (paginated) ───
+  router.get('/api/shopping/:id/items', (req, res) => {
+    const list = db.prepare('SELECT * FROM shopping_lists WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    if (!list) throw new NotFoundError('Shopping list', req.params.id);
+
+    const total = db.prepare('SELECT COUNT(*) as cnt FROM shopping_list_items WHERE list_id = ?').get(list.id).cnt;
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const rawLimit = parseInt(req.query.limit, 10);
+    const limit = (rawLimit > 0 && rawLimit <= 100) ? rawLimit : 20;
+    const offset = (page - 1) * limit;
+
+    const items = db.prepare('SELECT * FROM shopping_list_items WHERE list_id = ? ORDER BY category, position LIMIT ? OFFSET ?')
+      .all(list.id, limit, offset);
+
+    res.json({ data: items, total, page, limit });
+  });
+
   // ─── Create shopping list ───
   router.post('/api/shopping', (req, res) => {
     const { name, date_from, date_to } = req.body;
