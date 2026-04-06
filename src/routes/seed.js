@@ -19,5 +19,54 @@ module.exports = function seedRoutes({ db }) {
     res.json(result);
   });
 
+  // ─── Seed a sample 7-day meal plan ───
+  router.post('/api/seed/sample-plan', (req, res) => {
+    const recipes = db.prepare('SELECT id, name, meal_suitability FROM recipes WHERE user_id = ? ORDER BY RANDOM() LIMIT 30').all(req.userId);
+    if (!recipes.length) {
+      // Seed recipes first if none exist
+      seedIngredients(db, req.userId);
+      seedRecipes(db, req.userId);
+      const fresh = db.prepare('SELECT id, name, meal_suitability FROM recipes WHERE user_id = ? ORDER BY RANDOM() LIMIT 30').all(req.userId);
+      if (!fresh.length) return res.json({ created: 0 });
+      recipes.length = 0;
+      recipes.push(...fresh);
+    }
+
+    const mealTypes = ['breakfast', 'morning_snack', 'lunch', 'evening_snack', 'dinner'];
+    const today = new Date();
+    // Start from Monday of current week
+    const dayOfWeek = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+
+    let created = 0;
+    const seedPlan = db.transaction(() => {
+      for (let d = 0; d < 7; d++) {
+        const dateObj = new Date(monday);
+        dateObj.setDate(monday.getDate() + d);
+        const dateStr = dateObj.toISOString().split('T')[0];
+
+        for (const mt of mealTypes) {
+          // Skip if meal plan already exists for this date/type
+          const existing = db.prepare('SELECT id FROM meal_plans WHERE user_id = ? AND date = ? AND meal_type = ?').get(req.userId, dateStr, mt);
+          if (existing) continue;
+
+          // Pick a recipe (prefer meal_suitability match)
+          let recipe = recipes.find(r => {
+            try { return JSON.parse(r.meal_suitability || '[]').includes(mt); } catch { return false; }
+          });
+          if (!recipe) recipe = recipes[Math.floor(Math.random() * recipes.length)];
+
+          const plan = db.prepare('INSERT INTO meal_plans (user_id, date, meal_type) VALUES (?, ?, ?)').run(req.userId, dateStr, mt);
+          db.prepare('INSERT INTO meal_plan_items (meal_plan_id, recipe_id, servings, position) VALUES (?, ?, ?, 0)').run(plan.lastInsertRowid, recipe.id, 1);
+          created++;
+        }
+      }
+    });
+
+    seedPlan();
+    res.json({ created });
+  });
+
   return router;
 };
