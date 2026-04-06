@@ -93,11 +93,13 @@ function createHelpers(db) {
       totals.fat += (ing.fat || 0) * factor;
     }
     const servings = recipe.servings || 1;
+    // IC-15: Condiment portions halved for nutrition calculation
+    const condimentFactor = (recipe.category === 'condiment') ? 0.5 : 1;
     return {
-      calories: Math.round(totals.calories / servings),
-      protein: Math.round(totals.protein * 10 / servings) / 10,
-      carbs: Math.round(totals.carbs * 10 / servings) / 10,
-      fat: Math.round(totals.fat * 10 / servings) / 10,
+      calories: Math.round(totals.calories / servings * condimentFactor),
+      protein: Math.round(totals.protein * 10 / servings * condimentFactor) / 10,
+      carbs: Math.round(totals.carbs * 10 / servings * condimentFactor) / 10,
+      fat: Math.round(totals.fat * 10 / servings * condimentFactor) / 10,
     };
   }
 

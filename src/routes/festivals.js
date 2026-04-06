@@ -48,6 +48,13 @@ module.exports = function festivalRoutes({ db }) {
     res.json(festivals);
   });
 
+  // ─── IC-09: Ekadashi fasting calendar ───
+  router.get('/api/festivals/ekadashi', (req, res) => {
+    const year = parseInt(req.query.year, 10) || new Date().getFullYear();
+    const dates = calculateEkadashiDates(year);
+    res.json(dates);
+  });
+
   // ─── Upcoming festivals (next 30 days) ───
   router.get('/api/festivals/upcoming', (req, res) => {
     const festivals = db.prepare('SELECT * FROM festivals ORDER BY name').all();
@@ -144,6 +151,9 @@ module.exports = function festivalRoutes({ db }) {
       JOIN festival_recipes fr ON fr.recipe_id = r.id
       WHERE fr.festival_id = ?
     `).all(id);
+    try {
+      festival.slot_overrides = db.prepare('SELECT * FROM meal_slot_overrides WHERE festival_id = ?').all(id);
+    } catch { festival.slot_overrides = []; }
 
     res.json(festival);
   });
@@ -306,4 +316,69 @@ function checkIngredientViolation(ingredient, denyRules, allowRules, person, fes
   }
 
   return null;
+}
+
+/**
+ * Calculate approximate Ekadashi dates for a given year.
+ * Ekadashi = 11th day of each lunar fortnight (~2 per month).
+ * Uses a simplified lunar calendar approximation.
+ */
+function calculateEkadashiDates(year) {
+  const dates = [];
+  // Known new moon dates for 2026 (approximate, based on astronomical data)
+  // For a simplified approach: lunar month ≈ 29.53 days
+  // New moon on Jan 18, 2026 (approximate reference point)
+  const referenceNewMoon = new Date(2026, 0, 18); // Jan 18, 2026
+  const lunarMonth = 29.530588; // Average synodic month in days
+
+  // Calculate from a reference point for the target year
+  const yearStart = new Date(year, 0, 1);
+  const yearEnd = new Date(year, 11, 31);
+
+  // Find the first new moon on or before year start
+  let daysDiff = (yearStart - referenceNewMoon) / (1000 * 60 * 60 * 24);
+  let cyclesSinceRef = Math.floor(daysDiff / lunarMonth);
+  let firstNewMoon = new Date(referenceNewMoon.getTime() + cyclesSinceRef * lunarMonth * 24 * 60 * 60 * 1000);
+
+  // Go back one more cycle to be safe
+  firstNewMoon = new Date(firstNewMoon.getTime() - lunarMonth * 24 * 60 * 60 * 1000);
+
+  let currentNewMoon = firstNewMoon;
+
+  while (currentNewMoon <= yearEnd) {
+    // Shukla Paksha Ekadashi (11 days after new moon)
+    const shuklaEkadashi = new Date(currentNewMoon.getTime() + 11 * 24 * 60 * 60 * 1000);
+    if (shuklaEkadashi.getFullYear() === year) {
+      dates.push({
+        date: formatDate(shuklaEkadashi),
+        name: 'Shukla Paksha Ekadashi',
+        paksha: 'shukla',
+        month: shuklaEkadashi.toLocaleString('en-IN', { month: 'long' })
+      });
+    }
+
+    // Krishna Paksha Ekadashi (11 days after full moon, or ~26 days after new moon)
+    const krishnaEkadashi = new Date(currentNewMoon.getTime() + 26 * 24 * 60 * 60 * 1000);
+    if (krishnaEkadashi.getFullYear() === year) {
+      dates.push({
+        date: formatDate(krishnaEkadashi),
+        name: 'Krishna Paksha Ekadashi',
+        paksha: 'krishna',
+        month: krishnaEkadashi.toLocaleString('en-IN', { month: 'long' })
+      });
+    }
+
+    currentNewMoon = new Date(currentNewMoon.getTime() + lunarMonth * 24 * 60 * 60 * 1000);
+  }
+
+  // Sort by date and deduplicate
+  dates.sort((a, b) => a.date.localeCompare(b.date));
+  return dates;
+}
+
+function formatDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }

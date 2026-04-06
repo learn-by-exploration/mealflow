@@ -8,12 +8,13 @@ module.exports = function ingredientsRoutes({ db }) {
 
   // ─── List ingredients ───
   router.get('/api/ingredients', (req, res) => {
-    const { category, q } = req.query;
+    const { category, q, season } = req.query;
     let where = 'WHERE user_id = ?';
     const params = [req.userId];
 
     if (category) { where += ' AND category = ?'; params.push(category); }
-    if (q) { where += ' AND name LIKE ?'; params.push(`%${q}%`); }
+    if (season) { where += ' AND season = ?'; params.push(season); }
+    if (q) { where += ' AND (name LIKE ? OR aliases LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }
 
     const total = db.prepare(`SELECT COUNT(*) as cnt FROM ingredients ${where}`).get(...params).cnt;
 

@@ -404,5 +404,16 @@ module.exports = function mealsRoutes({ db, enrichRecipe }) {
     res.status(201).json({ created });
   });
 
+  // ─── IC-03: Thali completeness check ───
+  router.get('/api/meals/:date/completeness', (req, res) => {
+    const { date } = req.params;
+    const { meal_type } = req.query;
+    const type = meal_type || 'lunch';
+
+    const { checkThaliCompleteness } = require('../services/thali');
+    const result = checkThaliCompleteness(db, req.userId, date, type);
+    res.json(result);
+  });
+
   return router;
 };

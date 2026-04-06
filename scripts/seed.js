@@ -44,8 +44,8 @@ function seedRecipes(db, userId) {
   let count = 0;
 
   const insertRecipe = db.prepare(`
-    INSERT INTO recipes (user_id, name, description, servings, prep_time, cook_time, cuisine, difficulty, region, is_system, position)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+    INSERT INTO recipes (user_id, name, description, servings, prep_time, cook_time, cuisine, difficulty, region, is_system, position, meal_suitability, cooking_method, category)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
   `);
 
   const insertRecipeIng = db.prepare(`
@@ -66,7 +66,10 @@ function seedRecipes(db, userId) {
         const result = insertRecipe.run(
           userId, r.name, r.description || '', r.servings || 1,
           r.prep_time || 0, r.cook_time || 0, r.cuisine || '',
-          r.difficulty || 'easy', r.region || '', position
+          r.difficulty || 'easy', r.region || '', position,
+          JSON.stringify(r.meal_suitability || []),
+          r.cooking_method || '',
+          r.category || 'main'
         );
         const recipeId = result.lastInsertRowid;
 

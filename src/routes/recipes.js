@@ -163,7 +163,7 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
 
   // ─── List recipes ───
   router.get('/api/recipes', (req, res) => {
-    const { cuisine, difficulty, tag, favorite, q } = req.query;
+    const { cuisine, difficulty, tag, favorite, q, suitable_for, cooking_method, category } = req.query;
     let where = 'WHERE r.user_id = ? AND r.deleted_at IS NULL';
     const params = [req.userId];
 
@@ -175,6 +175,9 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
       where += ' AND r.id IN (SELECT rt.recipe_id FROM recipe_tags rt JOIN tags t ON t.id = rt.tag_id WHERE t.name = ? AND t.user_id = ?)';
       params.push(tag, req.userId);
     }
+    if (cooking_method) { where += ' AND r.cooking_method = ?'; params.push(cooking_method); }
+    if (category) { where += ' AND r.category = ?'; params.push(category); }
+    if (suitable_for) { where += " AND r.meal_suitability LIKE ?"; params.push(`%"${suitable_for}"%`); }
 
     const total = db.prepare(`SELECT COUNT(*) as cnt FROM recipes r ${where}`).get(...params).cnt;
 
