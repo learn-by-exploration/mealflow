@@ -177,10 +177,18 @@ app.use(require('./routes/units')(deps));
 
 // ─── Admin: Audit log rotation ───
 app.post('/api/admin/audit/rotate', (req, res) => {
-  const countBefore = db.prepare('SELECT COUNT(*) as cnt FROM audit_log').get().cnt;
-  audit.purge(90);
-  const countAfter = db.prepare('SELECT COUNT(*) as cnt FROM audit_log').get().cnt;
-  res.json({ deleted: countBefore - countAfter, remaining: countAfter });
+  try {
+    const role = db.prepare('SELECT household_role FROM users WHERE id = ?').get(req.userId);
+    if (!role || role.household_role !== 'admin') {
+      return res.status(403).json({ error: 'Admin role required', code: 'FORBIDDEN' });
+    }
+    const countBefore = db.prepare('SELECT COUNT(*) as cnt FROM audit_log').get().cnt;
+    audit.purge(90);
+    const countAfter = db.prepare('SELECT COUNT(*) as cnt FROM audit_log').get().cnt;
+    res.json({ deleted: countBefore - countAfter, remaining: countAfter });
+  } catch (err) {
+    res.status(500).json({ error: err.message, code: 'INTERNAL_ERROR' });
+  }
 });
 
 // ─── Error rate tracking (DO-07) ───

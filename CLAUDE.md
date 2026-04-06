@@ -152,7 +152,7 @@ login_attempts (email PK, attempts, first_attempt_at, locked_until)
 ### Core (5 tables — inline)
 ```
 ingredients        (id, user_id→users, name, category, calories, protein, carbs, fat, fiber, unit, created_at, updated_at) — UNIQUE(user_id, name)
-recipes            (id, user_id→users, name, description, servings, prep_time, cook_time, cuisine, difficulty, image_url, source_url, notes, is_favorite, position, region, is_system, meal_suitability, cooking_method, category, is_archived, created_at, updated_at)
+recipes            (id, user_id→users, name, description, servings, prep_time, cook_time, cuisine, difficulty, image_url, source_url, notes, is_favorite, position, region, is_system, meal_suitability, cooking_method, category, deleted_at, created_at, updated_at)
 recipe_ingredients (id, recipe_id→recipes, ingredient_id→ingredients, quantity, unit, notes, position)
 tags               (id, user_id→users, name, color) — UNIQUE(user_id, name)
 recipe_tags        (recipe_id→recipes, tag_id→tags) — M:N join
@@ -472,7 +472,7 @@ npm run audit               # npm audit (high severity)
 | 022 | updated-at | updated_at columns + triggers |
 | 023 | household-role | Role column on households |
 | 024 | meal-ratings | Meal rating system |
-| 025 | soft-delete-recipes | is_archived column |
+| 025 | soft-delete-recipes | deleted_at column (soft delete) |
 | 026 | recipe-versions | Version history (data JSON) |
 | 027 | shopping-completion | completed_at on shopping lists |
 | 028 | meal-plan-notes | Notes on meal plans |

@@ -171,6 +171,8 @@ describe('Batch 2: API Quality & Performance', () => {
   // ═══════════════════════════════════════════════════════════════
   describe('BE-05: Audit log rotation', () => {
     it('POST /api/admin/audit/rotate deletes old entries', async () => {
+      // Set user as admin
+      db.prepare("UPDATE users SET household_role = 'admin' WHERE id = 1").run();
       // Insert old entries
       for (let i = 0; i < 5; i++) {
         db.prepare("INSERT INTO audit_log (user_id, action, resource, created_at) VALUES (1, 'test', 'test', datetime('now', '-100 days'))").run();
@@ -189,6 +191,8 @@ describe('Batch 2: API Quality & Performance', () => {
     });
 
     it('audit auto-rotate removes entries older than 90 days', async () => {
+      // Set user as admin
+      db.prepare("UPDATE users SET household_role = 'admin' WHERE id = 1").run();
       for (let i = 0; i < 5; i++) {
         db.prepare("INSERT INTO audit_log (user_id, action, resource, created_at) VALUES (1, 'test', 'test', datetime('now', '-91 days'))").run();
       }
