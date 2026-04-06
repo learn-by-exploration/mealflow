@@ -1,6 +1,6 @@
 /**
  * Request logging middleware.
- * Logs method, path, status code, duration, userId, and IP for every API request.
+ * Logs method, path, status code, duration, userId, requestId, and IP for every API request.
  */
 module.exports = function createRequestLogger(logger) {
   return (req, res, next) => {
@@ -14,6 +14,7 @@ module.exports = function createRequestLogger(logger) {
           status: res.statusCode,
           durationMs: Math.round(durationMs),
           userId: req.userId || null,
+          requestId: req.requestId || null,
           ip: req.ip
         }, 'request');
       }

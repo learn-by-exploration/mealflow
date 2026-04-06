@@ -131,7 +131,7 @@ if (!config.isTest) {
 
 // ─── Auth middleware on all /api/* routes ───
 app.use('/api', (req, res, next) => {
-  if (req.path.startsWith('/auth/') || req.path === '/health') return optionalAuth(req, res, next);
+  if (req.path.startsWith('/auth/') || req.path.startsWith('/health')) return optionalAuth(req, res, next);
   requireAuth(req, res, next);
 });
 
@@ -180,15 +180,56 @@ app.post('/api/admin/audit/rotate', (req, res) => {
   res.json({ deleted: countBefore - countAfter, remaining: countAfter });
 });
 
+// ─── Error rate tracking (DO-07) ───
+const errorTimestamps = [];
+let totalRequests = 0;
+app.use((req, res, next) => {
+  totalRequests++;
+  res.on('finish', () => {
+    if (res.statusCode >= 500) {
+      errorTimestamps.push(Date.now());
+    }
+  });
+  next();
+});
+
 // ─── Health checks ───
 app.get('/api/health', (req, res) => {
   let dbOk = false;
   try { db.prepare('SELECT 1').get(); dbOk = true; } catch {}
+  let dbSizeMb = 0;
+  try {
+    const dbPath = path.join(config.dbDir, 'mealflow.db');
+    const stats = require('fs').statSync(dbPath);
+    dbSizeMb = Math.round((stats.size / (1024 * 1024)) * 100) / 100;
+    if (dbSizeMb > 500) {
+      logger.warn({ db_size_mb: dbSizeMb }, 'Database size exceeds 500MB');
+    }
+  } catch {}
   res.status(dbOk ? 200 : 503).json({
     status: dbOk ? 'ok' : 'degraded',
     version: config.version,
     uptime: Math.floor(process.uptime()),
     db: dbOk ? 'connected' : 'disconnected',
+    db_size_mb: dbSizeMb,
+  });
+});
+
+app.get('/api/health/metrics', (req, res) => {
+  const now = Date.now();
+  const oneMinAgo = now - 60_000;
+  const fiveMinAgo = now - 300_000;
+  // Prune old entries (> 5 min)
+  while (errorTimestamps.length > 0 && errorTimestamps[0] < fiveMinAgo) {
+    errorTimestamps.shift();
+  }
+  const error1m = errorTimestamps.filter(t => t >= oneMinAgo).length;
+  const error5m = errorTimestamps.length;
+  res.json({
+    error_count_1m: error1m,
+    error_count_5m: error5m,
+    uptime_s: Math.floor(process.uptime()),
+    request_count: totalRequests,
   });
 });
 
@@ -233,6 +274,16 @@ app.use(errorHandler);
 
 // ─── Start server when run directly ───
 if (require.main === module) {
+  // ─── DO-12: Environment validation ───
+  try {
+    const validateEnv = require('./validate-env');
+    validateEnv(process.env);
+  } catch (err) {
+    logger.fatal({ err: err.message }, 'Startup aborted: invalid environment');
+    console.error(err.message);
+    process.exit(1);
+  }
+
   process.on('uncaughtException', (err) => {
     logger.error({ err }, 'Uncaught exception — forcing shutdown');
     process.exit(1);
@@ -244,19 +295,23 @@ if (require.main === module) {
 
   const server = app.listen(PORT, () => logger.info({ port: PORT, version: config.version }, 'MealFlow started'));
 
-  // ─── Graceful shutdown ───
+  // ─── Graceful shutdown (DO-10) ───
   let shuttingDown = false;
   const shutdown = (signal) => {
     if (shuttingDown) return;
     shuttingDown = true;
-    logger.info({ signal }, 'Shutdown signal received, draining connections...');
+    server.getConnections((err, count) => {
+      logger.info({ signal, activeConnections: err ? 'unknown' : count }, 'Shutdown signal received, draining connections...');
+    });
     server.close(() => {
-      try { db.close(); } catch {}
+      try { audit.purge(90); logger.info('Audit log flushed'); } catch {}
+      try { db.close(); logger.info('Database closed'); } catch {}
       logger.info('Server stopped cleanly');
       process.exit(0);
     });
     setTimeout(() => {
       logger.warn('Forced shutdown after timeout');
+      try { audit.purge(90); } catch {}
       try { db.close(); } catch {}
       process.exit(1);
     }, config.shutdownTimeoutMs);
