@@ -2,7 +2,7 @@ const { Router } = require('express');
 const crypto = require('crypto');
 const { validate } = require('../middleware/validate');
 const { createHousehold, updateHousehold } = require('../schemas/households.schema');
-const { NotFoundError, ConflictError, ValidationError } = require('../errors');
+const { NotFoundError, ConflictError, ValidationError, ForbiddenError } = require('../errors');
 
 module.exports = function householdRoutes({ db, audit }) {
   const router = Router();
@@ -14,7 +14,7 @@ module.exports = function householdRoutes({ db, audit }) {
 
     const createHH = db.transaction(() => {
       const result = db.prepare('INSERT INTO households (name, created_by) VALUES (?, ?)').run(req.body.name, req.userId);
-      db.prepare('UPDATE users SET household_id = ? WHERE id = ?').run(result.lastInsertRowid, req.userId);
+      db.prepare('UPDATE users SET household_id = ?, household_role = ? WHERE id = ?').run(result.lastInsertRowid, 'admin', req.userId);
       return db.prepare('SELECT * FROM households WHERE id = ?').get(result.lastInsertRowid);
     });
     const household = createHH();
@@ -80,6 +80,21 @@ module.exports = function householdRoutes({ db, audit }) {
 
     if (audit) audit.log(req.userId, 'join', 'household', invite.household_id, req);
     res.json({ household_id: invite.household_id });
+  });
+
+  // ─── Delete household (admin only) ───
+  router.delete('/api/households/current', (req, res) => {
+    const user = db.prepare('SELECT household_id, household_role FROM users WHERE id = ?').get(req.userId);
+    if (!user || !user.household_id) throw new NotFoundError('Household');
+    if (user.household_role !== 'admin') throw new ForbiddenError('Only admins can delete the household');
+
+    const hhId = user.household_id;
+    // Clear household_id for all members first, then delete
+    db.prepare('UPDATE users SET household_id = NULL, household_role = ? WHERE household_id = ?').run('member', hhId);
+    db.prepare('DELETE FROM households WHERE id = ?').run(hhId);
+
+    if (audit) audit.log(req.userId, 'delete', 'household', hhId, req);
+    res.json({ ok: true });
   });
 
   return router;

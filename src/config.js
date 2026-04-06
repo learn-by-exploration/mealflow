@@ -22,6 +22,7 @@ const config = Object.freeze({
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 60000,
     max: parseInt(process.env.RATE_LIMIT_MAX, 10) || 200,
+    perUserMax: parseInt(process.env.RATE_LIMIT_PER_USER_MAX, 10) || 100,
   },
   auth: {
     saltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS, 10) || 12,
@@ -40,7 +41,7 @@ const config = Object.freeze({
   trustProxy: process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true',
   allowedOrigins: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
-    : [],
+    : (process.env.NODE_ENV === 'production' ? [] : ['http://localhost:3458']),
 });
 
 module.exports = config;

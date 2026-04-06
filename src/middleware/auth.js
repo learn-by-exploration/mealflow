@@ -36,6 +36,11 @@ function createAuthMiddleware(db) {
     req.userId = session.user_id;
     req.sessionId = sid;
     req.authMethod = 'session';
+
+    // Set householdId for household-scoped access
+    const user = db.prepare('SELECT household_id FROM users WHERE id = ?').get(session.user_id);
+    if (user) req.householdId = user.household_id;
+
     next();
   }
 

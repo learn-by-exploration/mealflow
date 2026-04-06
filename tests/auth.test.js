@@ -9,7 +9,7 @@ describe('Auth', () => {
 
   it('POST /api/auth/register — creates user', async () => {
     const res = await rawAgent().post('/api/auth/register').send({
-      email: 'new@test.com', password: 'password123', display_name: 'New User'
+      email: 'new@test.com', password: 'Password123', display_name: 'New User'
     });
     assert.equal(res.status, 201);
     assert.ok(res.body.id);
@@ -18,7 +18,7 @@ describe('Auth', () => {
 
   it('POST /api/auth/register — rejects duplicate email', async () => {
     const res = await rawAgent().post('/api/auth/register').send({
-      email: 'test@test.com', password: 'password123'
+      email: 'test@test.com', password: 'Password123'
     });
     assert.equal(res.status, 409);
   });

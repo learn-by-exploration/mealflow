@@ -2,16 +2,27 @@ const { Router } = require('express');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const config = require('../config');
+const { createRequirePassword } = require('../middleware/auth');
+
+function validatePasswordStrength(password) {
+  const errors = [];
+  if (typeof password !== 'string' || password.length < 8) errors.push('Password must be at least 8 characters');
+  if (!/[A-Z]/.test(password)) errors.push('Password must contain at least one uppercase letter');
+  if (!/[0-9]/.test(password)) errors.push('Password must contain at least one number');
+  return errors;
+}
 
 module.exports = function authRoutes({ db, audit }) {
   const router = Router();
+  const requirePassword = createRequirePassword(db, bcrypt);
 
   // ─── Register ───
   router.post('/api/auth/register', async (req, res) => {
     const { email, password, display_name } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
     if (typeof email !== 'string' || email.length > 254) return res.status(400).json({ error: 'Invalid email' });
-    if (typeof password !== 'string' || password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    const pwErrors = validatePasswordStrength(password);
+    if (pwErrors.length) return res.status(400).json({ error: pwErrors[0] });
 
     const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase().trim());
     if (existing) return res.status(409).json({ error: 'Email already registered' });
@@ -24,7 +35,7 @@ module.exports = function authRoutes({ db, audit }) {
       );
       // Auto-create household
       const hh = db.prepare('INSERT INTO households (name, created_by) VALUES (?, ?)').run('My Family', result.lastInsertRowid);
-      db.prepare('UPDATE users SET household_id = ? WHERE id = ?').run(hh.lastInsertRowid, result.lastInsertRowid);
+      db.prepare('UPDATE users SET household_id = ?, household_role = ? WHERE id = ?').run(hh.lastInsertRowid, 'admin', result.lastInsertRowid);
       return result;
     });
     const result = registerUser();
@@ -121,7 +132,8 @@ module.exports = function authRoutes({ db, audit }) {
     if (!req.userId) return res.status(401).json({ error: 'Authentication required' });
     const { current_password, new_password } = req.body;
     if (!current_password || !new_password) return res.status(400).json({ error: 'Current and new password required' });
-    if (typeof new_password !== 'string' || new_password.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    const pwErrors = validatePasswordStrength(new_password);
+    if (pwErrors.length) return res.status(400).json({ error: pwErrors[0] });
 
     const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.userId);
     if (!user || !bcrypt.compareSync(current_password, user.password_hash)) {
@@ -135,6 +147,16 @@ module.exports = function authRoutes({ db, audit }) {
     db.prepare('DELETE FROM sessions WHERE user_id = ? AND sid != ?').run(req.userId, req.sessionId);
 
     if (audit) audit.log(req.userId, 'change-password', 'user', req.userId, req);
+    res.json({ ok: true });
+  });
+
+  // ─── Account deletion ───
+  router.delete('/api/auth/account', requirePassword, (req, res) => {
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(req.userId);
+    db.prepare('DELETE FROM users WHERE id = ?').run(req.userId);
+
+    res.setHeader('Set-Cookie', 'mf_sid=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');
+    if (audit) audit.log(req.userId, 'delete-account', 'user', req.userId, req);
     res.json({ ok: true });
   });
 

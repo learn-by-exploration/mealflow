@@ -20,8 +20,8 @@ module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNe
       const ftsQuery = sanitized.split(/\s+/).map(w => `"${w}"*`).join(' ');
       let sql = `SELECT r.* FROM recipes r
         JOIN recipes_fts f ON f.rowid = r.id
-        WHERE recipes_fts MATCH ?`;
-      const params = [ftsQuery];
+        WHERE recipes_fts MATCH ? AND r.user_id = ?`;
+      const params = [ftsQuery, req.userId];
 
       if (region) { sql += ' AND r.region = ?'; params.push(region); }
       if (cuisine) { sql += ' AND r.cuisine = ?'; params.push(cuisine); }
@@ -30,8 +30,8 @@ module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNe
       sql += ' ORDER BY rank';
       recipes = db.prepare(sql).all(...params);
     } else {
-      let sql = 'SELECT r.* FROM recipes r WHERE 1=1';
-      const params = [];
+      let sql = 'SELECT r.* FROM recipes r WHERE r.user_id = ?';
+      const params = [req.userId];
 
       if (region) { sql += ' AND r.region = ?'; params.push(region); }
       if (cuisine) { sql += ' AND r.cuisine = ?'; params.push(cuisine); }
@@ -72,7 +72,7 @@ module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNe
 
   // ─── Clone system recipe ───
   router.post('/api/recipes/:id/clone', (req, res) => {
-    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(req.params.id);
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
     if (!recipe) throw new NotFoundError('Recipe', req.params.id);
 
     const position = getNextPosition('recipes', 'user_id = ?', [req.userId]);
@@ -108,7 +108,7 @@ module.exports = function recipesRoutes({ db, enrichRecipe, enrichRecipes, getNe
 
   // ─── Scaled recipe ───
   router.get('/api/recipes/:id/scaled/:servings', (req, res) => {
-    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ?').get(req.params.id);
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
     if (!recipe) throw new NotFoundError('Recipe', req.params.id);
 
     const targetServings = parseFloat(req.params.servings);

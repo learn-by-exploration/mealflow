@@ -11,6 +11,7 @@ const errorHandler = require('./middleware/errors');
 const createCsrfMiddleware = require('./middleware/csrf');
 const createAuditLogger = require('./services/audit');
 const createRequestLogger = require('./middleware/request-logger');
+const createPerUserRateLimit = require('./middleware/per-user-rate-limit');
 const logger = require('./logger');
 
 const app = express();
@@ -120,6 +121,14 @@ app.use('/api', (req, res, next) => {
   if (req.path.startsWith('/auth/')) return optionalAuth(req, res, next);
   requireAuth(req, res, next);
 });
+
+// ─── Per-user rate limiting ───
+if (!config.isTest) {
+  app.use('/api', createPerUserRateLimit({
+    maxRequests: config.rateLimit.perUserMax,
+    windowMs: config.rateLimit.windowMs,
+  }));
+}
 
 // ─── Auth routes ───
 app.use('/api/auth/login', authLimiter);
