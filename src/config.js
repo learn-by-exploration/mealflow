@@ -10,6 +10,7 @@ try {
 
 const config = Object.freeze({
   port: parseInt(process.env.PORT, 10) || 3458,
+  host: process.env.HOST || '0.0.0.0',
   dbDir: process.env.DB_DIR || path.join(__dirname, '..', 'data'),
   nodeEnv: process.env.NODE_ENV || 'development',
   isTest: process.env.NODE_ENV === 'test',

@@ -62,18 +62,26 @@ app.use('/api', (req, res, next) => {
 });
 
 // ─── CORS ───
-if (config.allowedOrigins.length > 0) {
-  app.use(cors({
-    origin: function(origin, callback) {
-      if (!origin) return callback(null, true);
-      if (config.allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true
-  }));
-} else {
-  app.use(cors({ origin: false }));
-}
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, same-origin)
+    if (!origin) return callback(null, true);
+    // Allow configured origins
+    if (config.allowedOrigins.length > 0 && config.allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow same-host on any port in development
+    if (!config.isProd) return callback(null, true);
+    // In production with no configured origins, allow private network IPs
+    try {
+      const url = new URL(origin);
+      const host = url.hostname;
+      if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.') || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) {
+        return callback(null, true);
+      }
+    } catch {}
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 
 // ─── Rate limiting ───
 if (!config.isTest) {
@@ -312,7 +320,8 @@ if (require.main === module) {
     process.exit(1);
   });
 
-  const server = app.listen(PORT, () => logger.info({ port: PORT, version: config.version }, 'MealFlow started'));
+  const HOST = config.host;
+  const server = app.listen(PORT, HOST, () => logger.info({ port: PORT, host: HOST, version: config.version }, 'MealFlow started'));
 
   // ─── Graceful shutdown (DO-10) ───
   let shuttingDown = false;

@@ -11,8 +11,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY src/ ./src/
 COPY public/ ./public/
+COPY data/ ./data/
+COPY scripts/ ./scripts/
 RUN mkdir -p /app/data /app/backups && chown -R node:node /app
-ENV DB_DIR=/app/data NODE_ENV=production PORT=3458
+ENV DB_DIR=/app/data NODE_ENV=production PORT=3458 HOST=0.0.0.0
 USER node
 EXPOSE 3458
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
