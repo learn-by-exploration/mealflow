@@ -46,7 +46,7 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
       const ftsQuery = sanitized.split(/\s+/).map(w => `"${w}"*`).join(' ');
       let sql = `SELECT r.* FROM recipes r
         JOIN recipes_fts f ON f.rowid = r.id
-        WHERE recipes_fts MATCH ? AND r.user_id = ?`;
+        WHERE recipes_fts MATCH ? AND r.user_id = ? AND r.deleted_at IS NULL`;
       const params = [ftsQuery, req.userId];
 
       if (region) { sql += ' AND r.region = ?'; params.push(region); }
@@ -56,7 +56,7 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
       sql += ' ORDER BY rank';
       recipes = db.prepare(sql).all(...params);
     } else {
-      let sql = 'SELECT r.* FROM recipes r WHERE r.user_id = ?';
+      let sql = 'SELECT r.* FROM recipes r WHERE r.user_id = ? AND r.deleted_at IS NULL';
       const params = [req.userId];
 
       if (region) { sql += ' AND r.region = ?'; params.push(region); }
@@ -154,10 +154,17 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
     res.json(enriched);
   });
 
+  // ─── Trash — list soft-deleted recipes ───
+  router.get('/api/recipes/trash', (req, res) => {
+    const recipes = db.prepare('SELECT * FROM recipes WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC')
+      .all(req.userId);
+    res.json(enrichRecipes(recipes));
+  });
+
   // ─── List recipes ───
   router.get('/api/recipes', (req, res) => {
     const { cuisine, difficulty, tag, favorite, q } = req.query;
-    let where = 'WHERE r.user_id = ?';
+    let where = 'WHERE r.user_id = ? AND r.deleted_at IS NULL';
     const params = [req.userId];
 
     if (cuisine) { where += ' AND r.cuisine = ?'; params.push(cuisine); }
@@ -184,7 +191,7 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
 
   // ─── Get single recipe ───
   router.get('/api/recipes/:id', (req, res) => {
-    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ? AND deleted_at IS NULL').get(req.params.id, req.userId);
     if (!recipe) throw new NotFoundError('Recipe', req.params.id);
     res.json(enrichRecipe(recipe));
   });
@@ -231,8 +238,17 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
 
   // ─── Update recipe ───
   router.put('/api/recipes/:id', validate(updateRecipe), (req, res) => {
-    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ? AND deleted_at IS NULL').get(req.params.id, req.userId);
     if (!recipe) throw new NotFoundError('Recipe', req.params.id);
+
+    // Save version snapshot before applying changes
+    const maxVersion = db.prepare('SELECT COALESCE(MAX(version), 0) AS v FROM recipe_versions WHERE recipe_id = ?').get(req.params.id).v;
+    const snapshot = { ...recipe };
+    delete snapshot.id;
+    delete snapshot.user_id;
+    db.prepare('INSERT INTO recipe_versions (recipe_id, version, data_json) VALUES (?, ?, ?)').run(
+      req.params.id, maxVersion + 1, JSON.stringify(snapshot)
+    );
 
     const data = req.body;
     const fields = [];
@@ -279,10 +295,26 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
     res.json(enrichRecipe(updated));
   });
 
-  // ─── Delete recipe ───
+  // ─── Soft delete recipe ───
   router.delete('/api/recipes/:id', (req, res) => {
-    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ? AND deleted_at IS NULL').get(req.params.id, req.userId);
     if (!recipe) throw new NotFoundError('Recipe', req.params.id);
+    db.prepare('UPDATE recipes SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?').run(req.params.id);
+    res.json({ ok: true });
+  });
+
+  // ─── Restore soft-deleted recipe ───
+  router.post('/api/recipes/:id/restore', (req, res) => {
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL').get(req.params.id, req.userId);
+    if (!recipe) throw new NotFoundError('Deleted recipe', req.params.id);
+    db.prepare('UPDATE recipes SET deleted_at = NULL WHERE id = ?').run(req.params.id);
+    res.json({ ok: true });
+  });
+
+  // ─── Permanent delete ───
+  router.delete('/api/recipes/:id/permanent', (req, res) => {
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL').get(req.params.id, req.userId);
+    if (!recipe) throw new NotFoundError('Deleted recipe', req.params.id);
     db.prepare('DELETE FROM recipes WHERE id = ?').run(req.params.id);
     res.json({ ok: true });
   });
@@ -294,6 +326,59 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
     const newVal = recipe.is_favorite ? 0 : 1;
     db.prepare('UPDATE recipes SET is_favorite = ? WHERE id = ?').run(newVal, req.params.id);
     res.json({ is_favorite: newVal });
+  });
+
+  // ─── Recipe version history ───
+  router.get('/api/recipes/:id/history', (req, res) => {
+    const recipe = db.prepare('SELECT id FROM recipes WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    if (!recipe) throw new NotFoundError('Recipe', req.params.id);
+
+    const versions = db.prepare('SELECT * FROM recipe_versions WHERE recipe_id = ? ORDER BY version')
+      .all(req.params.id);
+    res.json(versions);
+  });
+
+  // ─── Revert to version ───
+  router.post('/api/recipes/:id/revert/:versionId', (req, res) => {
+    const recipe = db.prepare('SELECT * FROM recipes WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    if (!recipe) throw new NotFoundError('Recipe', req.params.id);
+
+    const version = db.prepare('SELECT * FROM recipe_versions WHERE id = ? AND recipe_id = ?')
+      .get(req.params.versionId, req.params.id);
+    if (!version) throw new NotFoundError('Version', req.params.versionId);
+
+    const data = JSON.parse(version.data_json);
+    const restoreFields = ['name', 'description', 'servings', 'prep_time', 'cook_time', 'cuisine', 'difficulty', 'image_url', 'source_url', 'notes', 'region', 'is_favorite'];
+    const sets = [];
+    const vals = [];
+    for (const key of restoreFields) {
+      if (data[key] !== undefined) {
+        sets.push(`${key} = ?`);
+        vals.push(data[key]);
+      }
+    }
+    sets.push('updated_at = CURRENT_TIMESTAMP');
+    vals.push(req.params.id, req.userId);
+
+    // Workaround: drop and recreate FTS triggers to avoid SQLITE_CORRUPT_VTAB
+    // The content-synced FTS can become corrupt after rapid sequential updates
+    try {
+      db.exec('DROP TRIGGER IF EXISTS recipes_au');
+      db.prepare(`UPDATE recipes SET ${sets.join(', ')} WHERE id = ? AND user_id = ?`).run(...vals);
+      db.exec(`CREATE TRIGGER recipes_au AFTER UPDATE ON recipes BEGIN
+        INSERT INTO recipes_fts(recipes_fts, rowid, name, description, cuisine, region, notes)
+        VALUES('delete', old.id, old.name, old.description, old.cuisine, old.region, old.notes);
+        INSERT INTO recipes_fts(rowid, name, description, cuisine, region, notes)
+        VALUES (new.id, new.name, new.description, new.cuisine, new.region, new.notes);
+      END`);
+      db.exec("INSERT INTO recipes_fts(recipes_fts) VALUES('rebuild')");
+    } catch {
+      // Fallback: just do the update without FTS
+      db.prepare(`UPDATE recipes SET ${sets.join(', ')} WHERE id = ? AND user_id = ?`).run(...vals);
+    }
+
+    const updated = db.prepare('SELECT * FROM recipes WHERE id = ?').get(req.params.id);
+    res.json(enrichRecipe(updated));
   });
 
   // ─── Upload recipe image ───

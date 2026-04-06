@@ -130,6 +130,10 @@ module.exports = function shoppingRoutes({ db }) {
     if (!item) throw new NotFoundError('Shopping list item', req.params.itemId);
 
     db.prepare('UPDATE shopping_list_items SET checked = ? WHERE id = ?').run(item.checked ? 0 : 1, item.id);
+
+    // Auto-update completion tracking
+    updateCompletionStatus(db, list.id);
+
     res.json({ checked: !item.checked });
   });
 
@@ -241,3 +245,14 @@ module.exports = function shoppingRoutes({ db }) {
 
   return router;
 };
+
+function updateCompletionStatus(db, listId) {
+  const total = db.prepare('SELECT COUNT(*) AS c FROM shopping_list_items WHERE list_id = ?').get(listId).c;
+  const checked = db.prepare('SELECT COUNT(*) AS c FROM shopping_list_items WHERE list_id = ? AND checked = 1').get(listId).c;
+
+  if (total > 0 && checked === total) {
+    db.prepare('UPDATE shopping_lists SET completed_at = CURRENT_TIMESTAMP WHERE id = ?').run(listId);
+  } else {
+    db.prepare('UPDATE shopping_lists SET completed_at = NULL WHERE id = ?').run(listId);
+  }
+}

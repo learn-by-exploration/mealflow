@@ -171,6 +171,7 @@ app.use(require('./routes/notifications')(deps));
 app.use(require('./routes/calendar')(deps));
 app.use(require('./routes/ai')(deps));
 app.use(require('./routes/cost')(deps));
+app.use(require('./routes/ratings')(deps));
 
 // ─── Admin: Audit log rotation ───
 app.post('/api/admin/audit/rotate', (req, res) => {

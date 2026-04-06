@@ -99,5 +99,26 @@ module.exports = function costRoutes({ db }) {
     });
   });
 
+  // ─── DE-10: Cost trend report ───
+  router.get('/api/cost/trend', (req, res) => {
+    const days = parseInt(req.query.days, 10) || 30;
+
+    const rows = db.prepare(`
+      SELECT mp.date, SUM(ri.quantity * COALESCE(i.price_per_unit, 0)) AS cost
+      FROM meal_plans mp
+      JOIN meal_plan_items mpi ON mpi.meal_plan_id = mp.id
+      JOIN recipe_ingredients ri ON ri.recipe_id = mpi.recipe_id
+      JOIN ingredients i ON i.id = ri.ingredient_id
+      WHERE mp.user_id = ? AND mp.date >= date('now', ?)
+      GROUP BY mp.date
+      ORDER BY mp.date
+    `).all(req.userId, `-${days} days`);
+
+    res.json(rows.map(r => ({
+      date: r.date,
+      cost: Math.round(r.cost * 100) / 100,
+    })));
+  });
+
   return router;
 };

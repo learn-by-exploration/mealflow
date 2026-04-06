@@ -74,6 +74,61 @@ module.exports = function festivalRoutes({ db }) {
     res.json(upcoming);
   });
 
+  // ─── DE-11: Festival meal compliance report (by date query param) ───
+  router.get('/api/festivals/compliance', (req, res) => {
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ error: 'date query parameter required', code: 'VALIDATION_ERROR' });
+
+    const householdId = getUserHouseholdId(req.userId);
+    if (!householdId) {
+      return res.json({ compliant: true, violations: [], date });
+    }
+
+    const persons = db.prepare('SELECT * FROM persons WHERE household_id = ? AND is_active = 1').all(householdId);
+    const violations = [];
+
+    for (const person of persons) {
+      const observedFestivals = db.prepare(`
+        SELECT f.* FROM festivals f
+        JOIN person_festivals pf ON pf.festival_id = f.id
+        WHERE pf.person_id = ? AND f.is_fasting = 1
+      `).all(person.id);
+
+      for (const fest of observedFestivals) {
+        if (!isFestivalActiveOnDate(fest, date)) continue;
+
+        const rules = db.prepare('SELECT * FROM fasting_rules WHERE festival_id = ?').all(fest.id);
+        const denyRules = rules.filter(r => r.rule_type === 'deny');
+        const allowRules = rules.filter(r => r.rule_type === 'allow');
+
+        const items = db.prepare(`
+          SELECT mpi.*, r.name AS recipe_name
+          FROM meal_plan_items mpi
+          JOIN meal_plans mp ON mp.id = mpi.meal_plan_id
+          JOIN person_assignments pa ON pa.meal_plan_item_id = mpi.id
+          LEFT JOIN recipes r ON r.id = mpi.recipe_id
+          WHERE mp.date = ? AND mp.user_id = ? AND pa.person_id = ?
+        `).all(date, req.userId, person.id);
+
+        for (const item of items) {
+          if (!item.recipe_id) continue;
+          const ingredients = db.prepare(`
+            SELECT i.* FROM ingredients i
+            JOIN recipe_ingredients ri ON ri.ingredient_id = i.id
+            WHERE ri.recipe_id = ?
+          `).all(item.recipe_id);
+
+          for (const ing of ingredients) {
+            const violation = checkIngredientViolation(ing, denyRules, allowRules, person, fest, item);
+            if (violation) violations.push(violation);
+          }
+        }
+      }
+    }
+
+    res.json({ compliant: violations.length === 0, violations, date });
+  });
+
   // ─── Single festival with fasting rules and recipes ───
   router.get('/api/festivals/:id', (req, res) => {
     const id = parseInt(req.params.id, 10);

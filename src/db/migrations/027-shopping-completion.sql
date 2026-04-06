@@ -1,0 +1,1 @@
+ALTER TABLE shopping_lists ADD COLUMN completed_at DATETIME DEFAULT NULL;

@@ -70,5 +70,67 @@ module.exports = function statsRoutes({ db }) {
     res.json(topIngredients);
   });
 
+  // ─── DE-06: Most-cooked recipes (from meal plans) ───
+  router.get('/api/stats/top-recipes', (req, res) => {
+    const days = parseInt(req.query.days, 10) || 30;
+
+    const rows = db.prepare(`
+      SELECT r.id, r.name, COUNT(mpi.id) AS count
+      FROM meal_plan_items mpi
+      JOIN meal_plans mp ON mp.id = mpi.meal_plan_id
+      JOIN recipes r ON r.id = mpi.recipe_id
+      WHERE mp.user_id = ? AND mp.date >= date('now', ?)
+      GROUP BY r.id
+      ORDER BY count DESC
+      LIMIT 10
+    `).all(req.userId, `-${days} days`);
+
+    res.json(rows);
+  });
+
+  // ─── DE-08: Ingredient usage frequency (via meal plans) ───
+  router.get('/api/stats/ingredient-usage', (req, res) => {
+    const days = parseInt(req.query.days, 10) || 30;
+
+    const rows = db.prepare(`
+      SELECT i.id, i.name, i.category, COUNT(DISTINCT mpi.id) AS usage_count
+      FROM meal_plan_items mpi
+      JOIN meal_plans mp ON mp.id = mpi.meal_plan_id
+      JOIN recipe_ingredients ri ON ri.recipe_id = mpi.recipe_id
+      JOIN ingredients i ON i.id = ri.ingredient_id
+      WHERE mp.user_id = ? AND mp.date >= date('now', ?)
+      GROUP BY i.id
+      ORDER BY usage_count DESC
+      LIMIT 10
+    `).all(req.userId, `-${days} days`);
+
+    res.json(rows);
+  });
+
+  // ─── DE-09: Meal variety score ───
+  router.get('/api/stats/variety', (req, res) => {
+    const days = parseInt(req.query.days, 10) || 14;
+
+    const result = db.prepare(`
+      SELECT
+        COUNT(DISTINCT mpi.recipe_id) AS unique_recipes,
+        COUNT(mpi.id) AS total_meals
+      FROM meal_plan_items mpi
+      JOIN meal_plans mp ON mp.id = mpi.meal_plan_id
+      WHERE mp.user_id = ? AND mp.date >= date('now', ?) AND mpi.recipe_id IS NOT NULL
+    `).get(req.userId, `-${days} days`);
+
+    const score = result.total_meals > 0
+      ? Math.round((result.unique_recipes / result.total_meals) * 100)
+      : 0;
+
+    res.json({
+      score,
+      unique_recipes: result.unique_recipes,
+      total_meals: result.total_meals,
+      days,
+    });
+  });
+
   return router;
 };

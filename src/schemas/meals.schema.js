@@ -4,6 +4,7 @@ const { mealType, dateString } = require('./common.schema');
 const createMealPlan = z.object({
   date: dateString,
   meal_type: mealType,
+  notes: z.string().max(1000).default(''),
 });
 
 const addMealPlanItem = z.object({

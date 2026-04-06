@@ -268,13 +268,27 @@ module.exports = function mealsRoutes({ db, enrichRecipe }) {
 
   // ─── Create/ensure meal plan slot ───
   router.post('/api/meals', validate(createMealPlan), (req, res) => {
-    const { date, meal_type } = req.body;
+    const { date, meal_type, notes } = req.body;
     const existing = db.prepare('SELECT * FROM meal_plans WHERE user_id = ? AND date = ? AND meal_type = ?').get(req.userId, date, meal_type);
     if (existing) return res.json(existing);
 
-    const result = db.prepare('INSERT INTO meal_plans (user_id, date, meal_type) VALUES (?, ?, ?)').run(req.userId, date, meal_type);
+    const result = db.prepare('INSERT INTO meal_plans (user_id, date, meal_type, notes) VALUES (?, ?, ?, ?)').run(req.userId, date, meal_type, notes || '');
     const plan = db.prepare('SELECT * FROM meal_plans WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(plan);
+  });
+
+  // ─── Update meal plan ───
+  router.put('/api/meals/:id', (req, res) => {
+    const plan = db.prepare('SELECT * FROM meal_plans WHERE id = ? AND user_id = ?').get(req.params.id, req.userId);
+    if (!plan) throw new NotFoundError('Meal plan', req.params.id);
+
+    const { notes } = req.body;
+    if (notes !== undefined) {
+      db.prepare('UPDATE meal_plans SET notes = ? WHERE id = ?').run(notes, plan.id);
+    }
+
+    const updated = db.prepare('SELECT * FROM meal_plans WHERE id = ?').get(plan.id);
+    res.json(updated);
   });
 
   // ─── Add item to meal plan ───
