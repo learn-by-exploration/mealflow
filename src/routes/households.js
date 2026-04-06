@@ -31,7 +31,8 @@ module.exports = function householdRoutes({ db, audit }) {
     if (!household) throw new NotFoundError('Household');
 
     const members = db.prepare('SELECT id, email, display_name FROM users WHERE household_id = ?').all(household.id);
-    res.json({ ...household, members });
+    const personCount = db.prepare('SELECT COUNT(*) as cnt FROM persons WHERE household_id = ?').get(household.id).cnt;
+    res.json({ ...household, members, person_count: personCount });
   });
 
   // ─── Update household name ───

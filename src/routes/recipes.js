@@ -206,7 +206,12 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
     const limit = (rawLimit > 0 && rawLimit <= 100) ? rawLimit : 20;
     const offset = (page - 1) * limit;
 
-    const sql = `SELECT r.* FROM recipes r ${where} ORDER BY r.position, r.created_at DESC LIMIT ? OFFSET ?`;
+    // Sorting: ?sort=name|created_at|updated_at &order=asc|desc
+    const allowedSorts = { name: 'r.name', created_at: 'r.created_at', updated_at: 'r.updated_at' };
+    const sortCol = allowedSorts[req.query.sort] || 'r.created_at';
+    const sortOrder = req.query.order === 'asc' ? 'ASC' : 'DESC';
+
+    const sql = `SELECT r.* FROM recipes r ${where} ORDER BY ${sortCol} ${sortOrder} LIMIT ? OFFSET ?`;
     const recipes = db.prepare(sql).all(...params, limit, offset);
 
     res.json({ data: enrichRecipes(recipes), total, page, limit });

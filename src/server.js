@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -251,6 +252,14 @@ app.get('/ready', (req, res) => {
 // ─── Login page ───
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
+});
+
+// ─── OpenAPI spec endpoint ───
+app.get('/api/docs', (req, res) => {
+  const yamlPath = path.join(__dirname, '..', 'docs', 'openapi.yaml');
+  const yamlContent = fs.readFileSync(yamlPath, 'utf-8');
+  // Simple YAML-to-JSON: parse key-value lines (serve raw YAML as text for simplicity)
+  res.type('text/yaml').send(yamlContent);
 });
 
 // ─── API 404 catch-all ───

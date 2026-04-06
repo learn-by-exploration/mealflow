@@ -23,7 +23,12 @@ module.exports = function ingredientsRoutes({ db }) {
     const limit = (rawLimit > 0 && rawLimit <= 100) ? rawLimit : 20;
     const offset = (page - 1) * limit;
 
-    const sql = `SELECT * FROM ingredients ${where} ORDER BY category, name LIMIT ? OFFSET ?`;
+    const sql = `SELECT * FROM ingredients ${where} ORDER BY ${(() => {
+      const allowedSorts = { name: 'name', category: 'category', calories: 'calories' };
+      const sortCol = allowedSorts[req.query.sort] || 'category';
+      const sortOrder = req.query.order === 'desc' ? 'DESC' : 'ASC';
+      return req.query.sort ? `${sortCol} ${sortOrder}` : 'category, name';
+    })()} LIMIT ? OFFSET ?`;
     res.json({ data: db.prepare(sql).all(...params, limit, offset), total, page, limit });
   });
 

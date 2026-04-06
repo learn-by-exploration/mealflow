@@ -28,3 +28,7 @@ jobs:
       - name: Coverage report
         run: npm run test:coverage
         if: always()
+
+      - name: Security audit
+        run: npm run audit
+        if: always()

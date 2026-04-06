@@ -12,7 +12,8 @@
     "test:coverage": "c8 --reporter=text --reporter=lcov node --test --test-force-exit tests/*.test.js",
     "test:security": "node --test --test-force-exit tests/security.test.js tests/auth.test.js",
     "test:crud": "node --test --test-force-exit tests/recipes.test.js tests/meals.test.js tests/ingredients.test.js tests/shopping.test.js",
-    "test:smoke": "node --test --test-force-exit tests/e2e-smoke.test.js"
+    "test:smoke": "node --test --test-force-exit tests/e2e-smoke.test.js",
+    "audit": "npm audit --audit-level=high || true"
   },
   "keywords": [
     "meal-planner",
@@ -39,6 +40,7 @@
     "helmet": "^8.1.0",
     "multer": "^2.1.1",
     "pino": "^10.3.1",
+    "ws": "^8.20.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

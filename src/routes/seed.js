@@ -41,6 +41,14 @@ module.exports = function seedRoutes({ db }) {
 
     let created = 0;
     const seedPlan = db.transaction(() => {
+      // Group recipes by suitability for better matching
+      const suitabilityMap = {};
+      for (const mt of mealTypes) {
+        suitabilityMap[mt] = recipes.filter(r => {
+          try { return JSON.parse(r.meal_suitability || '[]').includes(mt); } catch { return false; }
+        });
+      }
+
       for (let d = 0; d < 7; d++) {
         const dateObj = new Date(monday);
         dateObj.setDate(monday.getDate() + d);
@@ -51,11 +59,14 @@ module.exports = function seedRoutes({ db }) {
           const existing = db.prepare('SELECT id FROM meal_plans WHERE user_id = ? AND date = ? AND meal_type = ?').get(req.userId, dateStr, mt);
           if (existing) continue;
 
-          // Pick a recipe (prefer meal_suitability match)
-          let recipe = recipes.find(r => {
-            try { return JSON.parse(r.meal_suitability || '[]').includes(mt); } catch { return false; }
-          });
-          if (!recipe) recipe = recipes[Math.floor(Math.random() * recipes.length)];
+          // Pick a recipe: strongly prefer meal_suitability match, rotate through matches
+          const suitable = suitabilityMap[mt];
+          let recipe;
+          if (suitable.length > 0) {
+            recipe = suitable[(d * mealTypes.indexOf(mt)) % suitable.length];
+          } else {
+            recipe = recipes[Math.floor(Math.random() * recipes.length)];
+          }
 
           const plan = db.prepare('INSERT INTO meal_plans (user_id, date, meal_type) VALUES (?, ?, ?)').run(req.userId, dateStr, mt);
           db.prepare('INSERT INTO meal_plan_items (meal_plan_id, recipe_id, servings, position) VALUES (?, ?, ?, 0)').run(plan.lastInsertRowid, recipe.id, 1);

@@ -1,0 +1,1777 @@
+openapi: 3.0.3
+info:
+  title: MealFlow API
+  description: India-focused family meal planning app API
+  version: 0.9.0
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3458
+    description: Local development
+
+tags:
+  - name: auth
+    description: Authentication & sessions
+  - name: recipes
+    description: Recipe management
+  - name: ingredients
+    description: Ingredient database
+  - name: meals
+    description: Meal planning
+  - name: shopping
+    description: Shopping lists
+  - name: nutrition
+    description: Nutrition tracking & goals
+  - name: households
+    description: Household management
+  - name: persons
+    description: Family member profiles
+  - name: polls
+    description: Family meal polls
+  - name: tags
+    description: Recipe tags
+  - name: templates
+    description: Meal templates
+  - name: pantry
+    description: Pantry management
+  - name: festivals
+    description: Festival & fasting calendar
+  - name: stats
+    description: Dashboard statistics
+  - name: calendar
+    description: Calendar integration
+  - name: cost
+    description: Cost tracking
+  - name: units
+    description: Unit conversion
+  - name: ratings
+    description: Meal ratings
+  - name: health
+    description: Health checks
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: mf_sid
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    Recipe:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        servings:
+          type: integer
+        prep_time:
+          type: integer
+        cook_time:
+          type: integer
+        cuisine:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        is_favorite:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        ingredients:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipeIngredient'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        nutrition:
+          $ref: '#/components/schemas/NutritionSummary'
+
+    RecipeIngredient:
+      type: object
+      properties:
+        id:
+          type: integer
+        ingredient_id:
+          type: integer
+        quantity:
+          type: number
+        unit:
+          type: string
+        notes:
+          type: string
+
+    Ingredient:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        calories:
+          type: number
+        protein:
+          type: number
+        carbs:
+          type: number
+        fat:
+          type: number
+        fiber:
+          type: number
+        unit:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        color:
+          type: string
+        recipe_count:
+          type: integer
+
+    MealPlan:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        meal_type:
+          type: string
+          enum: [breakfast, morning_snack, lunch, evening_snack, dinner]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MealPlanItem'
+
+    MealPlanItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        recipe_id:
+          type: integer
+        custom_name:
+          type: string
+        servings:
+          type: number
+
+    ShoppingList:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+        total_items:
+          type: integer
+        checked_items:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShoppingListItem'
+
+    ShoppingListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        quantity:
+          type: number
+        unit:
+          type: string
+        category:
+          type: string
+        checked:
+          type: integer
+
+    NutritionSummary:
+      type: object
+      properties:
+        calories:
+          type: number
+        protein:
+          type: number
+        carbs:
+          type: number
+        fat:
+          type: number
+
+    NutritionGoal:
+      type: object
+      properties:
+        id:
+          type: integer
+        calories_target:
+          type: number
+        protein_target:
+          type: number
+        carbs_target:
+          type: number
+        fat_target:
+          type: number
+
+    Household:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        created_by:
+          type: integer
+        members:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              email:
+                type: string
+              display_name:
+                type: string
+        person_count:
+          type: integer
+
+    Person:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        dietary_type:
+          type: string
+        spice_level:
+          type: integer
+        sugar_level:
+          type: integer
+
+    Poll:
+      type: object
+      properties:
+        id:
+          type: integer
+        question:
+          type: string
+        target_date:
+          type: string
+          format: date
+        target_meal_type:
+          type: string
+        status:
+          type: string
+          enum: [open, closed]
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              custom_name:
+                type: string
+              recipe_id:
+                type: integer
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        meal_type:
+          type: string
+
+    PantryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        quantity:
+          type: number
+        unit:
+          type: string
+        category:
+          type: string
+        location:
+          type: string
+
+    Festival:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        region:
+          type: string
+        date_rule:
+          type: string
+        duration_days:
+          type: integer
+        is_fasting:
+          type: integer
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        display_name:
+          type: string
+
+security:
+  - cookieAuth: []
+
+paths:
+  /api/auth/register:
+    post:
+      tags: [auth]
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, display_name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                display_name:
+                  type: string
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/login:
+    post:
+      tags: [auth]
+      summary: Login with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: Session cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/auth/session:
+    get:
+      tags: [auth]
+      summary: Get current session user
+      responses:
+        '200':
+          description: Session info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /api/auth/change-password:
+    post:
+      tags: [auth]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password:
+                  type: string
+                new_password:
+                  type: string
+      responses:
+        '200':
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/recipes:
+    get:
+      tags: [recipes]
+      summary: List recipes (paginated)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: cuisine
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: favorite
+          in: query
+          schema:
+            type: string
+            enum: ['1']
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, created_at, updated_at]
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: Paginated recipe list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Recipe'
+    post:
+      tags: [recipes]
+      summary: Create a recipe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                servings:
+                  type: integer
+                prep_time:
+                  type: integer
+                cook_time:
+                  type: integer
+                cuisine:
+                  type: string
+                difficulty:
+                  type: string
+                ingredients:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      ingredient_id:
+                        type: integer
+                      quantity:
+                        type: number
+                      unit:
+                        type: string
+                tags:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '201':
+          description: Recipe created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+
+  /api/recipes/{id}:
+    get:
+      tags: [recipes]
+      summary: Get a recipe by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Recipe detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [recipes]
+      summary: Update a recipe
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                servings:
+                  type: integer
+      responses:
+        '200':
+          description: Recipe updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+    delete:
+      tags: [recipes]
+      summary: Delete a recipe (soft delete)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/recipes/search:
+    get:
+      tags: [recipes]
+      summary: Full-text search recipes
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: cuisine
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+        - name: region
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recipe'
+
+  /api/ingredients:
+    get:
+      tags: [ingredients]
+      summary: List ingredients (paginated)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, category, calories]
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: Paginated ingredient list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Ingredient'
+    post:
+      tags: [ingredients]
+      summary: Create an ingredient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category]
+              properties:
+                name:
+                  type: string
+                category:
+                  type: string
+                calories:
+                  type: number
+                protein:
+                  type: number
+                carbs:
+                  type: number
+                fat:
+                  type: number
+                fiber:
+                  type: number
+                unit:
+                  type: string
+      responses:
+        '201':
+          description: Ingredient created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+
+  /api/ingredients/{id}:
+    get:
+      tags: [ingredients]
+      summary: Get ingredient by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ingredient detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+    put:
+      tags: [ingredients]
+      summary: Update ingredient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                category:
+                  type: string
+                calories:
+                  type: number
+      responses:
+        '200':
+          description: Updated ingredient
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingredient'
+    delete:
+      tags: [ingredients]
+      summary: Delete ingredient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/meals:
+    get:
+      tags: [meals]
+      summary: List meal plans for a date range
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Meal plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MealPlan'
+    post:
+      tags: [meals]
+      summary: Create a meal plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date, meal_type]
+              properties:
+                date:
+                  type: string
+                  format: date
+                meal_type:
+                  type: string
+      responses:
+        '201':
+          description: Meal plan created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlan'
+
+  /api/meals/{id}:
+    get:
+      tags: [meals]
+      summary: Get meal plan by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Meal plan detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlan'
+    delete:
+      tags: [meals]
+      summary: Delete meal plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/shopping:
+    get:
+      tags: [shopping]
+      summary: List shopping lists
+      responses:
+        '200':
+          description: Shopping lists with item counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ShoppingList'
+    post:
+      tags: [shopping]
+      summary: Create shopping list
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                date_from:
+                  type: string
+                  format: date
+                date_to:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Shopping list created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShoppingList'
+
+  /api/shopping/{id}:
+    get:
+      tags: [shopping]
+      summary: Get shopping list by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Shopping list with items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShoppingList'
+
+  /api/shopping/generate:
+    post:
+      tags: [shopping]
+      summary: Generate shopping list from meal plans
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [date_from, date_to]
+              properties:
+                date_from:
+                  type: string
+                  format: date
+                date_to:
+                  type: string
+                  format: date
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Generated shopping list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShoppingList'
+
+  /api/nutrition/log:
+    get:
+      tags: [nutrition]
+      summary: Get nutrition log
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Nutrition log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [nutrition]
+      summary: Log nutrition entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date
+                meal_type:
+                  type: string
+                recipe_id:
+                  type: integer
+                servings:
+                  type: number
+      responses:
+        '201':
+          description: Nutrition logged
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/nutrition/goals:
+    get:
+      tags: [nutrition]
+      summary: Get nutrition goals
+      responses:
+        '200':
+          description: Nutrition goals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NutritionGoal'
+    put:
+      tags: [nutrition]
+      summary: Set nutrition goals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NutritionGoal'
+      responses:
+        '200':
+          description: Goals updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NutritionGoal'
+
+  /api/nutrition/summary:
+    get:
+      tags: [nutrition]
+      summary: Daily nutrition summary
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Daily summary
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/tags:
+    get:
+      tags: [tags]
+      summary: List tags with recipe counts
+      responses:
+        '200':
+          description: Tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tag'
+    post:
+      tags: [tags]
+      summary: Create a tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+      responses:
+        '201':
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+
+  /api/tags/{id}:
+    put:
+      tags: [tags]
+      summary: Update a tag
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+      responses:
+        '200':
+          description: Updated tag
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+    delete:
+      tags: [tags]
+      summary: Delete a tag
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/households:
+    post:
+      tags: [households]
+      summary: Create a household
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Household created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Household'
+
+  /api/households/current:
+    get:
+      tags: [households]
+      summary: Get current user's household with members and person count
+      responses:
+        '200':
+          description: Household detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Household'
+    put:
+      tags: [households]
+      summary: Update household name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Household'
+    delete:
+      tags: [households]
+      summary: Delete household (admin only)
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/households/invite:
+    post:
+      tags: [households]
+      summary: Generate invite code
+      responses:
+        '201':
+          description: Invite code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+
+  /api/households/join:
+    post:
+      tags: [households]
+      summary: Join household by invite code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+      responses:
+        '200':
+          description: Joined
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  household_id:
+                    type: integer
+
+  /api/persons:
+    get:
+      tags: [persons]
+      summary: List persons in household
+      responses:
+        '200':
+          description: Persons list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Person'
+    post:
+      tags: [persons]
+      summary: Add a person to household
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                dietary_type:
+                  type: string
+                spice_level:
+                  type: integer
+                sugar_level:
+                  type: integer
+      responses:
+        '201':
+          description: Person created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+
+  /api/polls:
+    get:
+      tags: [polls]
+      summary: List polls for user's household
+      responses:
+        '200':
+          description: Polls
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Poll'
+    post:
+      tags: [polls]
+      summary: Create a poll
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question, target_date, target_meal_type, options]
+              properties:
+                question:
+                  type: string
+                target_date:
+                  type: string
+                  format: date
+                target_meal_type:
+                  type: string
+                options:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      recipe_id:
+                        type: integer
+                      custom_name:
+                        type: string
+                closes_at:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Poll created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poll'
+
+  /api/polls/{id}:
+    get:
+      tags: [polls]
+      summary: Get poll detail with votes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Poll detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poll'
+
+  /api/polls/{id}/close:
+    post:
+      tags: [polls]
+      summary: Close a poll
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Poll closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poll'
+
+  /api/templates:
+    get:
+      tags: [templates]
+      summary: List meal templates
+      responses:
+        '200':
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+    post:
+      tags: [templates]
+      summary: Create a meal template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, meal_type]
+              properties:
+                name:
+                  type: string
+                meal_type:
+                  type: string
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+
+  /api/pantry:
+    get:
+      tags: [pantry]
+      summary: List pantry items
+      responses:
+        '200':
+          description: Pantry items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PantryItem'
+    post:
+      tags: [pantry]
+      summary: Add pantry item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, quantity, unit]
+              properties:
+                name:
+                  type: string
+                quantity:
+                  type: number
+                unit:
+                  type: string
+                category:
+                  type: string
+                location:
+                  type: string
+      responses:
+        '201':
+          description: Pantry item added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PantryItem'
+
+  /api/festivals:
+    get:
+      tags: [festivals]
+      summary: List festivals
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Festivals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Festival'
+
+  /api/stats/dashboard:
+    get:
+      tags: [stats]
+      summary: Dashboard statistics
+      responses:
+        '200':
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_recipes:
+                    type: integer
+                  total_ingredients:
+                    type: integer
+                  favorites:
+                    type: integer
+
+  /api/stats/nutrition-trends:
+    get:
+      tags: [stats]
+      summary: Nutrition trends
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Nutrition trends
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /api/stats/top-ingredients:
+    get:
+      tags: [stats]
+      summary: Top used ingredients
+      responses:
+        '200':
+          description: Top ingredients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /api/calendar:
+    get:
+      tags: [calendar]
+      summary: Calendar events (meals + festivals)
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Calendar data
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/cost/summary:
+    get:
+      tags: [cost]
+      summary: Cost summary for date range
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Cost summary
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/units:
+    get:
+      tags: [units]
+      summary: List supported units
+      responses:
+        '200':
+          description: Units list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    category:
+                      type: string
+
+  /api/units/convert:
+    post:
+      tags: [units]
+      summary: Convert between units
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value, from, to]
+              properties:
+                value:
+                  type: number
+                from:
+                  type: string
+                to:
+                  type: string
+      responses:
+        '200':
+          description: Conversion result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: number
+
+  /api/ratings:
+    post:
+      tags: [ratings]
+      summary: Rate a meal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [meal_plan_id, rating]
+              properties:
+                meal_plan_id:
+                  type: integer
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        '201':
+          description: Rating created
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/seed/sample-plan:
+    post:
+      tags: [recipes]
+      summary: Seed a 7-day sample meal plan
+      responses:
+        '200':
+          description: Seeded plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created:
+                    type: integer
+
+  /api/docs:
+    get:
+      tags: [health]
+      summary: OpenAPI spec as JSON
+      security: []
+      responses:
+        '200':
+          description: OpenAPI specification
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/health:
+    get:
+      tags: [health]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  version:
+                    type: string
+                  uptime:
+                    type: integer
+                  db:
+                    type: string
