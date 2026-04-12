@@ -19,6 +19,10 @@ Self-hosted, no cloud dependency. Works on any device with a browser.
 
 **Design docs:** `docs/design/requirements.md` · `docs/design/implementation-plan.md`
 
+> **Shared standards** (git workflow, security rules, testing strategy, backend service architecture,
+> error handling, anti-patterns, documentation requirements) are in the parent repo's `CLAUDE.md`.
+> All standards defined there apply here. This file covers MealFlow-specific structure and conventions only.
+
 ## Quick Start
 
 ```bash
