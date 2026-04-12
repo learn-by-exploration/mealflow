@@ -8,7 +8,9 @@
 **India-focused family meal planning app** — the only tool purpose-built for Indian households coordinating multi-course meals (thali model) across family members with different dietary needs, spice tolerances, and fasting schedules.
 
 Multi-user Express.js backend + vanilla JS SPA frontend. SQLite via better-sqlite3.
-Self-hosted, no cloud dependency. Works on any device with a browser.
+Dual deployment: Free tier (Synclyf-hosted web) and Paid tier (self-hosted Docker Compose). Full data ownership in both tiers. Works on any device with a browser.
+
+Service-level telemetry (health checks, metrics, error rates) is required for operational monitoring but MUST NOT include user content, meal data, or personal information.
 
 **5 novel features with zero competition worldwide:**
 1. Per-person dish customization within a group meal
