@@ -1,6 +1,11 @@
 // ─── MealFlow SPA ───
 import { api, setApiErrorHandler } from './js/api.js';
 import { esc, fmtTime, fmtDate, fmtNutrition, today, dateOffset, debounce, capitalize, mealIcon, categoryIcon } from './js/utils.js';
+import { mount as mountPeople } from './js/views/people.js';
+import { mount as mountPlannerView } from './js/views/meal-planner.js';
+import { mount as mountRecipesView } from './js/views/recipes.js';
+import { mount as mountShoppingView } from './js/views/shopping.js';
+import { mount as mountNutritionView } from './js/views/nutrition.js';
 
 // ─── State ───
 let currentView = 'today';
@@ -27,7 +32,7 @@ async function init() {
 
   // Issue 4: Read initial view from URL path
   const pathView = window.location.pathname.replace(/^\//, '').split('/')[0];
-  const validViews = ['planner','recipes','shopping','nutrition','settings','pantry','polls','templates','ingredients','dashboard'];
+  const validViews = ['planner','recipes','shopping','nutrition','settings','pantry','polls','templates','ingredients','dashboard','people'];
   if (pathView && validViews.includes(pathView)) {
     currentView = pathView;
   }
@@ -118,7 +123,8 @@ async function render() {
     case 'recipes':  await renderRecipes(content); break;
     case 'ingredients': await renderIngredients(content); break;
     case 'shopping': await renderShopping(content); break;
-    case 'nutrition': await renderNutrition(content); break;
+    case 'nutrition': await mountNutritionView(content); break;
+    case 'people': await mountPeople(content); break;
     case 'dashboard': await renderDashboard(content); break;
     case 'settings': await renderSettings(content); break;
     case 'pantry':   await renderPantry(content); break;
