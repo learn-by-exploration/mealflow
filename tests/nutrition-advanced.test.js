@@ -11,6 +11,8 @@ describe('Nutrition Advanced (Per-Person)', () => {
   beforeEach(() => cleanDb());
   after(() => teardown());
 
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
   // Helper: full setup chain for per-person nutrition
   function setupPersonWithMeal(opts = {}) {
     const { db } = setup();
@@ -160,7 +162,7 @@ describe('Nutrition Advanced (Per-Person)', () => {
   });
 
   it('POST /api/nutrition/alerts/generate — generates low alerts', async () => {
-    const { db, person } = setupPersonWithMeal({ date: '2026-04-05' });
+    const { db, person } = setupPersonWithMeal({ date: yesterday });
 
     // Set high targets so intake is <70%
     db.prepare('UPDATE persons SET calorie_target = ?, protein_target = ? WHERE id = ?').run(10000, 500, person.id);
@@ -173,7 +175,7 @@ describe('Nutrition Advanced (Per-Person)', () => {
   });
 
   it('POST /api/nutrition/alerts/generate — generates high alerts', async () => {
-    const { db, person } = setupPersonWithMeal({ date: '2026-04-05' });
+    const { db, person } = setupPersonWithMeal({ date: yesterday });
 
     // Set very low targets so intake is >150%
     db.prepare('UPDATE persons SET calorie_target = ?, protein_target = ? WHERE id = ?').run(1, 0.1, person.id);
@@ -186,7 +188,7 @@ describe('Nutrition Advanced (Per-Person)', () => {
   });
 
   it('Alert generation is idempotent (doesn\'t duplicate for same date)', async () => {
-    const { db, person } = setupPersonWithMeal({ date: '2026-04-05' });
+    const { db, person } = setupPersonWithMeal({ date: yesterday });
     db.prepare('UPDATE persons SET calorie_target = ? WHERE id = ?').run(10000, person.id);
 
     await agent().post('/api/nutrition/alerts/generate');

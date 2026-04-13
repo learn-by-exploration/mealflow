@@ -7,6 +7,8 @@ describe('Leftovers', () => {
   beforeEach(() => cleanDb());
   after(() => teardown());
 
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
   function createMealPlanItem(planId, recipeId, servings = 1) {
     const { db } = setup();
     const r = db.prepare('INSERT INTO meal_plan_items (meal_plan_id, recipe_id, servings, position) VALUES (?,?,?,?)').run(planId, recipeId, servings, 0);
@@ -35,7 +37,7 @@ describe('Leftovers', () => {
   });
 
   it('GET /api/meals/leftovers — lists recent leftovers', async () => {
-    const plan = makeMealPlan({ date: '2026-04-04' });
+    const plan = makeMealPlan({ date: yesterday });
     const recipe = makeRecipe({ name: 'Leftover Dal' });
     const item = createMealPlanItem(plan.id, recipe.id);
 
@@ -49,7 +51,7 @@ describe('Leftovers', () => {
   });
 
   it('POST /api/meals/items/:id/reuse — reuses leftover in new slot', async () => {
-    const plan = makeMealPlan({ date: '2026-04-04' });
+    const plan = makeMealPlan({ date: yesterday });
     const recipe = makeRecipe();
     const item = createMealPlanItem(plan.id, recipe.id);
 
@@ -67,7 +69,7 @@ describe('Leftovers', () => {
   });
 
   it('Reused item has leftover_from_item_id set', async () => {
-    const plan = makeMealPlan({ date: '2026-04-04' });
+    const plan = makeMealPlan({ date: yesterday });
     const recipe = makeRecipe();
     const item = createMealPlanItem(plan.id, recipe.id);
 
