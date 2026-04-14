@@ -52,7 +52,16 @@ module.exports = function initPlugin(context) {
   // ─── Build router with all MealFlow routes ───
   const router = Router();
 
-  // Auth routes handled by monolith — skip MealFlow's auth
+  // Session endpoint — the SPA calls /api/auth/session to verify auth.
+  // Auth is handled by the monolith; we just return the monolith user.
+  router.get('/api/auth/session', (req, res) => {
+    if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
+    const mfUser = db.prepare('SELECT id, email, display_name, household_id FROM users WHERE id = ?').get(req.userId);
+    if (!mfUser) return res.status(401).json({ error: 'User not found in MealFlow' });
+    res.json({ id: mfUser.id, email: mfUser.email, display_name: mfUser.display_name, householdId: mfUser.household_id });
+  });
+
+  // Auth routes handled by monolith — skip MealFlow's standalone auth
   // Mount all feature routes (absolute paths)
   router.use(require('./routes/recipes')(deps));
   router.use(require('./routes/ingredients')(deps));
