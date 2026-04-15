@@ -36,15 +36,15 @@ module.exports = function authRoutes({ db, audit }) {
       // Auto-create household
       const hh = db.prepare('INSERT INTO households (name, created_by) VALUES (?, ?)').run('My Family', result.lastInsertRowid);
       db.prepare('UPDATE users SET household_id = ?, household_role = ? WHERE id = ?').run(hh.lastInsertRowid, 'admin', result.lastInsertRowid);
-      return result;
-    });
-    const result = registerUser();
 
-    const sid = crypto.randomUUID();
-    const days = config.session.maxAgeDays;
-    db.prepare("INSERT INTO sessions (sid, user_id, expires_at) VALUES (?, ?, datetime('now', ?))").run(
-      sid, result.lastInsertRowid, `+${days} days`
-    );
+      const sid = crypto.randomUUID();
+      const days = config.session.maxAgeDays;
+      db.prepare("INSERT INTO sessions (sid, user_id, expires_at) VALUES (?, ?, datetime('now', ?))").run(
+        sid, result.lastInsertRowid, `+${days} days`
+      );
+      return { ...result, sid, days };
+    });
+    const { sid, days, ...result } = registerUser();
 
     const parts = [`mf_sid=${sid}`, 'HttpOnly', 'SameSite=Lax', 'Path=/', `Max-Age=${days * 86400}`];
     if (req.secure || req.headers['x-forwarded-proto'] === 'https') parts.push('Secure');
