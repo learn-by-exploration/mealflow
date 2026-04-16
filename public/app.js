@@ -47,7 +47,7 @@ async function init() {
 
   // Issue 6: Register service worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').catch(() => {});
     // Issue 27: Notify user when a new service worker takes control
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       showToast('Update available — refresh to get new features', 'info');
