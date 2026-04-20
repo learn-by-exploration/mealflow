@@ -31,6 +31,74 @@
   --shadow: rgba(0, 0, 0, 0.3);
 }
 
+/* ─── Theme: Forest ─── */
+[data-theme="forest"] {
+  --bg-primary: #1a2f1a;
+  --bg-secondary: #243524;
+  --bg-tertiary: #2d4a2d;
+  --text-primary: #e8f5e9;
+  --text-secondary: #a5d6a7;
+  --text-muted: #81c784;
+  --border: #2d4a2d;
+  --accent: #4caf50;
+  --accent-hover: #66bb6a;
+  --success: #43a047;
+  --warning: #ffb74d;
+  --error: #e57373;
+  --shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Theme: Ocean ─── */
+[data-theme="ocean"] {
+  --bg-primary: #0d1b2a;
+  --bg-secondary: #1b2838;
+  --bg-tertiary: #274060;
+  --text-primary: #e0f2f1;
+  --text-secondary: #80cbc4;
+  --text-muted: #4db6ac;
+  --border: #274060;
+  --accent: #0097a7;
+  --accent-hover: #00bcd4;
+  --success: #26a69a;
+  --warning: #ffa726;
+  --error: #ef5350;
+  --shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Theme: Rosé ─── */
+[data-theme="rose"] {
+  --bg-primary: #2a1520;
+  --bg-secondary: #3d1f30;
+  --bg-tertiary: #52293f;
+  --text-primary: #fce4ec;
+  --text-secondary: #f48fb1;
+  --text-muted: #f06292;
+  --border: #52293f;
+  --accent: #e91e63;
+  --accent-hover: #ec407a;
+  --success: #66bb6a;
+  --warning: #ffca28;
+  --error: #ef5350;
+  --shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* ─── Theme: Nord ─── */
+[data-theme="nord"] {
+  --bg-primary: #2e3440;
+  --bg-secondary: #3b4252;
+  --bg-tertiary: #434c5e;
+  --text-primary: #eceff4;
+  --text-secondary: #d8dee9;
+  --text-muted: #9da5b4;
+  --border: #434c5e;
+  --accent: #88c0d0;
+  --accent-hover: #8fbcbb;
+  --success: #a3be8c;
+  --warning: #ebcb8b;
+  --error: #bf616a;
+  --shadow: rgba(0, 0, 0, 0.3);
+}
+
 /* ─── Reset ─── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; }
@@ -958,3 +1026,62 @@ body {
   height: 12px;
   border-radius: 2px;
 }
+
+/* ════════════════════════════════════════════════════
+   Theme Picker Swatches
+   ════════════════════════════════════════════════════ */
+.color-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+@media (max-width: 600px) { .color-picker { grid-template-columns: repeat(2, 1fr); } }
+.color-swatch {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform 150ms ease, border-color 150ms ease;
+  background: none;
+}
+.color-swatch.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.color-swatch:hover { transform: translateY(-2px); }
+.swatch-preview {
+  height: 52px;
+  display: flex;
+  align-items: flex-end;
+  padding: 0.5rem 0.625rem;
+  gap: 0.25rem;
+}
+.swatch-preview-bar { width: 100%; height: 6px; border-radius: 3px; }
+.swatch-label {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Theme swatch colors */
+.swatch-bg-light { background: #f8fafc; }
+.swatch-accent-light { background: #6366f1; }
+.swatch-surface-light { background: #ffffff; color: #1a1a2e; }
+
+.swatch-bg-dark { background: #0f172a; }
+.swatch-accent-dark { background: #6366f1; }
+.swatch-surface-dark { background: #1e293b; color: #f1f5f9; }
+
+.swatch-bg-forest { background: #1a2f1a; }
+.swatch-accent-forest { background: #4caf50; }
+.swatch-surface-forest { background: #243524; color: #e8f5e9; }
+
+.swatch-bg-ocean { background: #0d1b2a; }
+.swatch-accent-ocean { background: #0097a7; }
+.swatch-surface-ocean { background: #1b2838; color: #e0f2f1; }
+
+.swatch-bg-rose { background: #2a1520; }
+.swatch-accent-rose { background: #e91e63; }
+.swatch-surface-rose { background: #3d1f30; color: #fce4ec; }
+
+.swatch-bg-nord { background: #2e3440; }
+.swatch-accent-nord { background: #88c0d0; }
+.swatch-surface-nord { background: #3b4252; color: #eceff4; }

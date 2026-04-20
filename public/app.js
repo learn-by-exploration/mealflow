@@ -1524,16 +1524,45 @@ async function renderSettingsData(el) {
 
 // Theme tab
 function renderSettingsTheme(el) {
+  const themes = [
+    { id: 'light', label: 'Light', bg: '#f8fafc', surface: '#ffffff', accent: '#6366f1', text: '#1a1a2e' },
+    { id: 'dark', label: 'Midnight', bg: '#0f172a', surface: '#1e293b', accent: '#6366f1', text: '#f1f5f9' },
+    { id: 'forest', label: 'Forest', bg: '#1a2f1a', surface: '#243524', accent: '#4caf50', text: '#e8f5e9' },
+    { id: 'ocean', label: 'Ocean', bg: '#0d1b2a', surface: '#1b2838', accent: '#0097a7', text: '#e0f2f1' },
+    { id: 'rose', label: 'Rosé', bg: '#2a1520', surface: '#3d1f30', accent: '#e91e63', text: '#fce4ec' },
+    { id: 'nord', label: 'Nord', bg: '#2e3440', surface: '#3b4252', accent: '#88c0d0', text: '#eceff4' },
+  ];
+  const current = localStorage.getItem('mf_theme') || 'light';
+
   el.innerHTML = `
     <h3>Theme</h3>
-    <p class="text-muted">Midnight theme is the default and only available theme.</p>
-    <div class="theme-preview">
-      <div class="theme-card active">
-        <div class="theme-swatch" style="background:var(--bg-primary);border:2px solid var(--accent)"></div>
-        <span>Midnight</span>
-      </div>
+    <p class="text-muted">Choose a color scheme that suits your preference.</p>
+    <div class="color-picker">
+      ${themes.map(t => `
+        <button class="color-swatch${current === t.id ? ' selected' : ''}" data-theme-id="${t.id}" title="${t.label}" aria-label="${t.label} theme">
+          <div class="swatch-preview swatch-bg-${t.id}">
+            <div class="swatch-preview-bar swatch-accent-${t.id}"></div>
+          </div>
+          <div class="swatch-label swatch-surface-${t.id}">${t.label}</div>
+        </button>
+      `).join('')}
     </div>
   `;
+
+  el.querySelectorAll('.color-swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.themeId;
+      if (id === 'light') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', id);
+      }
+      localStorage.setItem('mf_theme', id);
+      el.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      btn.classList.add('selected');
+      showToast(`Theme set to ${btn.title}`, 'success');
+    });
+  });
 }
 
 // ════════════════════════════════════════════════════

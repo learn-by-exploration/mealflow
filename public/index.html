@@ -137,9 +137,20 @@
 
   <script type="module" src="/app.js"></script>
 <script>
+// Apply saved theme on load
+(function() {
+  var t = localStorage.getItem('mf_theme');
+  if (t && t !== 'light') document.documentElement.setAttribute('data-theme', t);
+})();
 window.addEventListener('message',function(e){
   if(e.data&&e.data.type==='synclyf-theme'){
-    document.documentElement.setAttribute('data-theme',e.data.theme==='dark'?'dark':'');
+    var theme = e.data.theme;
+    if(theme==='light'){
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    try { localStorage.setItem('mf_theme', theme); } catch(x) {}
   }
 });
 </script>
