@@ -87,8 +87,21 @@ function setupNav() {
     window.location.href = '/login';
   });
 
-  document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
-    document.getElementById('sidebar').classList.toggle('collapsed');
+  const collapseBtn = document.getElementById('sidebar-collapse');
+  const sidebarState = localStorage.getItem('mf_sidebar');
+  if (sidebarState === 'collapsed') {
+    document.getElementById('sidebar')?.classList.add('collapsed');
+    if (collapseBtn) collapseBtn.setAttribute('aria-expanded', 'false');
+  }
+  collapseBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const sb = document.getElementById('sidebar');
+    sb.classList.toggle('collapsed');
+    const isExpanded = !sb.classList.contains('collapsed');
+    collapseBtn.setAttribute('aria-expanded', String(isExpanded));
+    localStorage.setItem('mf_sidebar', isExpanded ? 'expanded' : 'collapsed');
+    const icon = collapseBtn.querySelector('.material-icons-round');
+    if (icon) icon.textContent = isExpanded ? 'chevron_left' : 'chevron_right';
   });
 
   document.getElementById('modal-overlay')?.addEventListener('click', (e) => {
@@ -700,7 +713,7 @@ async function showAddMealModal(date, slot) {
   document.getElementById('meal-recipe-search')?.addEventListener('input', debounce(async (e) => {
     const q = e.target.value;
     let filtered = [];
-    try { filtered = await api.get(`/api/recipes?q=${encodeURIComponent(q)}`); } catch {}
+    try { const resp = await api.get(`/api/recipes?q=${encodeURIComponent(q)}`); filtered = Array.isArray(resp) ? resp : (Array.isArray(resp?.data) ? resp.data : []); } catch {}
     if (!Array.isArray(filtered)) filtered = [];
     const list = document.getElementById('meal-recipe-list');
     if (list) {
@@ -739,8 +752,8 @@ async function renderRecipes(el) {
     <div class="recipe-grid">${[1,2,3,4].map(() => '<div class="skeleton-card"><div class="skeleton-line h-lg w-75"></div><div class="skeleton-line w-50"></div><div class="skeleton-line"></div></div>').join('')}</div>
   `;
 
-  recipes = await api.get('/api/recipes');
-  if (!Array.isArray(recipes)) recipes = [];
+  const resp = await api.get('/api/recipes');
+  recipes = Array.isArray(resp) ? resp : (Array.isArray(resp?.data) ? resp.data : []);
 
   el.innerHTML = `
     <div class="view-header">
@@ -795,8 +808,9 @@ async function renderRecipes(el) {
     if (q) params.set('q', q);
     if (recipeFilters.cuisine) params.set('cuisine', recipeFilters.cuisine);
     if (recipeFilters.difficulty) params.set('difficulty', recipeFilters.difficulty);
-    recipes = await api.get(`/api/recipes?${params.toString()}`);
-    if (!Array.isArray(recipes)) recipes = [];
+    if (recipeFilters.dietary) params.set('tag', recipeFilters.dietary);
+    const resp = await api.get(`/api/recipes?${params.toString()}`);
+    recipes = Array.isArray(resp) ? resp : (Array.isArray(resp?.data) ? resp.data : []);
     renderRecipeGrid();
   }));
 
@@ -835,8 +849,9 @@ function applyRecipeFilters() {
   if (q) params.set('q', q);
   if (recipeFilters.cuisine) params.set('cuisine', recipeFilters.cuisine);
   if (recipeFilters.difficulty) params.set('difficulty', recipeFilters.difficulty);
+  if (recipeFilters.dietary) params.set('tag', recipeFilters.dietary);
   api.get(`/api/recipes?${params.toString()}`).then(data => {
-    recipes = Array.isArray(data) ? data : [];
+    recipes = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
     renderRecipeGrid();
   });
 }
@@ -899,12 +914,21 @@ async function showRecipeDetail(id) {
       <p>${recipe.nutrition.calories} cal · ${recipe.nutrition.protein}g protein · ${recipe.nutrition.carbs}g carbs · ${recipe.nutrition.fat}g fat</p>
     ` : ''}
     <div class="modal-actions">
+      <button class="btn btn-outline" data-action="toggle-fav" data-id="${recipe.id}" data-fav="${recipe.is_favorite ? 1 : 0}">${recipe.is_favorite ? '★ Unfavorite' : '☆ Favorite'}</button>
       <button class="btn btn-outline" data-action="edit-recipe" data-id="${recipe.id}">Edit</button>
       <button class="btn btn-danger" data-action="delete-recipe" data-id="${recipe.id}">Delete</button>
     </div>
   `);
 
   // CSP-safe event delegation for recipe detail actions
+  document.querySelectorAll('[data-action="toggle-fav"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const result = await api.patch(`/api/recipes/${btn.dataset.id}/favorite`);
+      showToast(result.is_favorite ? 'Added to favorites ⭐' : 'Removed from favorites', 'success');
+      closeModal();
+      await render();
+    });
+  });
   document.querySelectorAll('[data-action="edit-recipe"]').forEach(btn => {
     btn.addEventListener('click', () => window._editRecipe(parseInt(btn.dataset.id)));
   });

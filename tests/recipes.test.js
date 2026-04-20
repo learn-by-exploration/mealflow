@@ -123,4 +123,70 @@ describe('Recipes', () => {
     assert.ok(res.body.ingredients.length > 0);
     assert.ok(res.body.tags.length > 0);
   });
+
+  it('GET /api/recipes?favorite=true — filters favorites (accepts true/1)', async () => {
+    const fav = makeRecipe({ name: 'Fav Recipe', is_favorite: 1 });
+    const notFav = makeRecipe({ name: 'Not Fav' });
+
+    // Test with favorite=true
+    const res1 = await agent().get('/api/recipes?favorite=true');
+    assert.equal(res1.status, 200);
+    assert.equal(res1.body.data.length, 1);
+    assert.equal(res1.body.data[0].name, 'Fav Recipe');
+
+    // Test with favorite=1
+    const res2 = await agent().get('/api/recipes?favorite=1');
+    assert.equal(res2.status, 200);
+    assert.equal(res2.body.data.length, 1);
+    assert.equal(res2.body.data[0].name, 'Fav Recipe');
+
+    // Test without favorite filter returns all
+    const res3 = await agent().get('/api/recipes');
+    assert.equal(res3.body.total, 2);
+  });
+
+  it('GET /api/recipes — paginated response has data/total/page/limit', async () => {
+    makeRecipe({ name: 'R1' });
+    makeRecipe({ name: 'R2' });
+    makeRecipe({ name: 'R3' });
+
+    const res = await agent().get('/api/recipes?limit=2&page=1');
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(res.body.data));
+    assert.equal(res.body.data.length, 2);
+    assert.equal(res.body.total, 3);
+    assert.equal(res.body.page, 1);
+    assert.equal(res.body.limit, 2);
+
+    const res2 = await agent().get('/api/recipes?limit=2&page=2');
+    assert.equal(res2.body.data.length, 1);
+    assert.equal(res2.body.page, 2);
+  });
+
+  it('GET /api/recipes?tag= — filters by tag name', async () => {
+    const r1 = makeRecipe({ name: 'Veg Dish' });
+    const r2 = makeRecipe({ name: 'Non-Veg Dish' });
+    const vegTag = makeTag({ name: 'veg' });
+    const nvTag = makeTag({ name: 'non-veg' });
+    linkTag(r1.id, vegTag.id);
+    linkTag(r2.id, nvTag.id);
+
+    const res = await agent().get('/api/recipes?tag=veg');
+    assert.equal(res.status, 200);
+    assert.equal(res.body.data.length, 1);
+    assert.equal(res.body.data[0].name, 'Veg Dish');
+  });
+
+  it('GET /api/recipes — combined filters (cuisine + q + difficulty)', async () => {
+    makeRecipe({ name: 'Easy Indian Curry', cuisine: 'Indian', difficulty: 'easy' });
+    makeRecipe({ name: 'Hard Indian Biryani', cuisine: 'Indian', difficulty: 'hard' });
+    makeRecipe({ name: 'Easy Italian Pasta', cuisine: 'Italian', difficulty: 'easy' });
+
+    const res = await agent().get('/api/recipes?cuisine=Indian&difficulty=easy');
+    assert.equal(res.body.data.length, 1);
+    assert.equal(res.body.data[0].name, 'Easy Indian Curry');
+
+    const res2 = await agent().get('/api/recipes?q=indian');
+    assert.equal(res2.body.data.length, 2);
+  });
 });

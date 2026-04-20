@@ -477,14 +477,18 @@ describe('Batch 4: Data Model, Analytics & Reporting', () => {
       const r1 = makeRecipe({ name: 'A' });
       const r2 = makeRecipe({ name: 'B' });
 
+      // Use relative dates so test doesn't go stale
+      const today = new Date();
+      const d = (offset) => new Date(today.getTime() - offset * 86400000).toISOString().slice(0, 10);
+
       // 2 unique recipes in 4 meals = 50%
-      const plan1 = makeMealPlan({ date: '2026-04-01' });
+      const plan1 = makeMealPlan({ date: d(1) });
       makeMealPlanItem(plan1.id, r1.id);
-      const plan2 = makeMealPlan({ date: '2026-04-02' });
+      const plan2 = makeMealPlan({ date: d(2) });
       makeMealPlanItem(plan2.id, r2.id);
-      const plan3 = makeMealPlan({ date: '2026-04-03' });
+      const plan3 = makeMealPlan({ date: d(3) });
       makeMealPlanItem(plan3.id, r1.id);
-      const plan4 = makeMealPlan({ date: '2026-04-04' });
+      const plan4 = makeMealPlan({ date: d(4) });
       makeMealPlanItem(plan4.id, r2.id);
 
       const res = await agent().get('/api/stats/variety?days=14');
@@ -504,11 +508,14 @@ describe('Batch 4: Data Model, Analytics & Reporting', () => {
       const r2 = makeRecipe({ name: 'B' });
       const r3 = makeRecipe({ name: 'C' });
 
-      const plan1 = makeMealPlan({ date: '2026-04-01' });
+      const today = new Date();
+      const d = (offset) => new Date(today.getTime() - offset * 86400000).toISOString().slice(0, 10);
+
+      const plan1 = makeMealPlan({ date: d(1) });
       makeMealPlanItem(plan1.id, r1.id);
-      const plan2 = makeMealPlan({ date: '2026-04-02' });
+      const plan2 = makeMealPlan({ date: d(2) });
       makeMealPlanItem(plan2.id, r2.id);
-      const plan3 = makeMealPlan({ date: '2026-04-03' });
+      const plan3 = makeMealPlan({ date: d(3) });
       makeMealPlanItem(plan3.id, r3.id);
 
       const res = await agent().get('/api/stats/variety?days=14');

@@ -17,10 +17,10 @@
 <body>
   <!-- ─── Sidebar ─── -->
   <aside id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
-    <div class="sidebar-header">
-      <h1 class="logo">🍽️ MealFlow</h1>
-      <button class="icon-btn" id="sidebar-toggle" title="Toggle sidebar" aria-label="Toggle sidebar">
-        <span class="material-icons-round">menu</span>
+    <div class="sidebar-header" style="position:relative">
+      <h1 class="logo">🍽️ <span class="logo-text">MealFlow</span></h1>
+      <button id="sidebar-collapse" class="sidebar-collapse-btn" aria-label="Collapse sidebar" aria-expanded="true">
+        <span class="material-icons-round">chevron_left</span>
       </button>
     </div>
     <nav class="sidebar-nav">
@@ -53,7 +53,7 @@
         <span class="nav-label">Polls</span>
       </a>
       <a href="#" data-view="nutrition" class="nav-item" aria-label="Nutrition">
-        <span class="material-icons-round">monitoring</span>
+        <span class="material-icons-round">insert_chart</span>
         <span class="nav-label">Nutrition</span>
       </a>
       <a href="#" data-view="people" class="nav-item" aria-label="Household Members">
@@ -109,7 +109,7 @@
   </nav>
   <div id="bottom-nav-more" class="bottom-nav-more-menu" role="menu" aria-label="More navigation options">
     <button class="bottom-nav-more-item" data-view="pantry" role="menuitem"><span class="material-icons-round">kitchen</span> Pantry</button>
-    <button class="bottom-nav-more-item" data-view="nutrition" role="menuitem"><span class="material-icons-round">monitoring</span> Nutrition</button>
+    <button class="bottom-nav-more-item" data-view="nutrition" role="menuitem"><span class="material-icons-round">insert_chart</span> Nutrition</button>
     <button class="bottom-nav-more-item" data-view="people" role="menuitem"><span class="material-icons-round">group</span> People</button>
     <button class="bottom-nav-more-item" data-view="polls" role="menuitem"><span class="material-icons-round">how_to_vote</span> Polls</button>
     <button class="bottom-nav-more-item" data-view="templates" role="menuitem"><span class="material-icons-round">content_copy</span> Templates</button>
@@ -136,5 +136,12 @@
   </div>
 
   <script type="module" src="/app.js"></script>
+<script>
+window.addEventListener('message',function(e){
+  if(e.data&&e.data.type==='synclyf-theme'){
+    document.documentElement.setAttribute('data-theme',e.data.theme==='dark'?'dark':'');
+  }
+});
+</script>
 </body>
 </html>

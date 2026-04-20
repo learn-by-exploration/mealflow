@@ -189,7 +189,7 @@ module.exports = function recipesRoutes({ db, dbDir, enrichRecipe, enrichRecipes
 
     if (cuisine) { where += ' AND r.cuisine = ?'; params.push(cuisine); }
     if (difficulty) { where += ' AND r.difficulty = ?'; params.push(difficulty); }
-    if (favorite === '1') { where += ' AND r.is_favorite = 1'; }
+    if (favorite === '1' || favorite === 'true') { where += ' AND r.is_favorite = 1'; }
     if (q) { where += ' AND (r.name LIKE ? OR r.description LIKE ?)'; params.push(`%${q}%`, `%${q}%`); }
     if (tag) {
       where += ' AND r.id IN (SELECT rt.recipe_id FROM recipe_tags rt JOIN tags t ON t.id = rt.tag_id WHERE t.name = ? AND t.user_id = ?)';

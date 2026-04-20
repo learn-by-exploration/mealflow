@@ -48,7 +48,10 @@ module.exports = function authRoutes({ db, audit }) {
 
     const parts = [`mf_sid=${sid}`, 'HttpOnly', 'SameSite=Lax', 'Path=/', `Max-Age=${days * 86400}`];
     if (req.secure || req.headers['x-forwarded-proto'] === 'https') parts.push('Secure');
-    res.setHeader('Set-Cookie', parts.join('; '));
+    const prev = res.getHeader('Set-Cookie');
+    const cookies = prev ? (Array.isArray(prev) ? prev : [prev]) : [];
+    cookies.push(parts.join('; '));
+    res.setHeader('Set-Cookie', cookies);
 
     if (audit) audit.log(result.lastInsertRowid, 'register', 'user', result.lastInsertRowid, req);
 
@@ -97,7 +100,10 @@ module.exports = function authRoutes({ db, audit }) {
 
     const parts = [`mf_sid=${sid}`, 'HttpOnly', 'SameSite=Lax', 'Path=/', `Max-Age=${days * 86400}`];
     if (req.secure || req.headers['x-forwarded-proto'] === 'https') parts.push('Secure');
-    res.setHeader('Set-Cookie', parts.join('; '));
+    const prev = res.getHeader('Set-Cookie');
+    const cookies = prev ? (Array.isArray(prev) ? prev : [prev]) : [];
+    cookies.push(parts.join('; '));
+    res.setHeader('Set-Cookie', cookies);
 
     if (audit) audit.log(user.id, 'login', 'user', user.id, req);
 
