@@ -1,0 +1,20 @@
+{
+  "service": "MealFlow",
+  "prefix": "mf",
+  "icon": "restaurant",
+  "color": "meals",
+  "views": [
+    {"id": "today", "label": "Today", "icon": "today"},
+    {"id": "planner", "label": "Meal Planner", "icon": "calendar_month"},
+    {"id": "recipes", "label": "Recipes", "icon": "restaurant_menu"},
+    {"id": "ingredients", "label": "Ingredients", "icon": "egg"},
+    {"id": "shopping", "label": "Shopping Lists", "icon": "shopping_cart"},
+    {"id": "pantry", "label": "Pantry", "icon": "kitchen"},
+    {"id": "polls", "label": "Polls", "icon": "how_to_vote"},
+    {"id": "nutrition", "label": "Nutrition", "icon": "insert_chart"},
+    {"id": "people", "label": "People", "icon": "group"},
+    {"id": "dashboard", "label": "Dashboard", "icon": "dashboard"},
+    {"id": "templates", "label": "Templates", "icon": "content_copy"},
+    {"id": "settings", "label": "Settings", "icon": "settings"}
+  ]
+}
